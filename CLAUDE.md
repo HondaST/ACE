@@ -30,7 +30,7 @@ Fullstack/backend web application built with TypeScript/JavaScript.
 |---|---|
 | Instance | `localhost\SQLEXPRESS` |
 | Database | `tax-paladin` |
-| Auth | Windows Authentication (Trusted Connection) |
+| Auth | SQL Server Authentication (`sa`) |
 
 Connection is managed through `src/db.ts` (`getPool()` / `closePool()`).
 Config is read from `.env` — copy `.env.example` to `.env` to get started.
