@@ -22,7 +22,7 @@
       border-radius: 12px;
       box-shadow: 0 4px 24px rgba(0,0,0,.10);
       width: 100%;
-      max-width: 440px;
+      max-width: 460px;
       overflow: hidden;
     }
 
@@ -32,25 +32,11 @@
       text-align: center;
       padding: 32px 24px 24px;
     }
+    .card-header h1 { font-size: 24px; font-weight: 700; letter-spacing: .5px; }
+    .card-header p  { margin-top: 6px; font-size: 14px; opacity: .80; }
 
-    .card-header h1 {
-      font-size: 24px;
-      font-weight: 700;
-      letter-spacing: .5px;
-    }
-
-    .card-header p {
-      margin-top: 6px;
-      font-size: 14px;
-      opacity: .80;
-    }
-
-    /* Tab switcher */
-    .tabs {
-      display: flex;
-      border-bottom: 2px solid #e5e7eb;
-    }
-
+    /* Tabs */
+    .tabs { display: flex; border-bottom: 2px solid #e5e7eb; }
     .tab-btn {
       flex: 1;
       padding: 14px;
@@ -60,24 +46,18 @@
       font-weight: 600;
       color: #6b7280;
       cursor: pointer;
-      transition: color .2s, border-bottom .2s;
       border-bottom: 3px solid transparent;
       margin-bottom: -2px;
+      transition: color .2s;
     }
+    .tab-btn.active { color: #1a56db; border-bottom-color: #1a56db; }
 
-    .tab-btn.active {
-      color: #1a56db;
-      border-bottom-color: #1a56db;
-    }
-
-    /* Forms */
+    /* Form body */
     .card-body { padding: 28px 32px 32px; }
-
     .form-panel { display: none; }
     .form-panel.active { display: block; }
 
     .form-group { margin-bottom: 18px; }
-
     label {
       display: block;
       font-size: 13px;
@@ -86,6 +66,7 @@
       margin-bottom: 6px;
     }
 
+    .input-wrap { position: relative; }
     input {
       width: 100%;
       padding: 11px 14px;
@@ -93,13 +74,30 @@
       border: 1.5px solid #d1d5db;
       border-radius: 6px;
       outline: none;
-      transition: border-color .2s, box-shadow .2s;
       color: #111827;
+      transition: border-color .2s, box-shadow .2s;
     }
-
     input:focus {
       border-color: #1a56db;
       box-shadow: 0 0 0 3px rgba(26,86,219,.15);
+    }
+
+    /* Password toggle eye */
+    .pw-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: #6b7280;
+      font-size: 16px;
+      line-height: 1;
+    }
+    input[type="password"], input[type="text"].pw-field {
+      padding-right: 40px;
     }
 
     .name-row {
@@ -108,25 +106,30 @@
       gap: 14px;
     }
 
+    .password-hint {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 5px;
+    }
+
     .btn {
       width: 100%;
       padding: 13px;
       background: #1a56db;
-      color: #ffffff;
+      color: #fff;
       font-size: 16px;
       font-weight: 700;
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      transition: background .2s;
       margin-top: 6px;
+      transition: background .2s;
     }
-
-    .btn:hover  { background: #1648c0; }
-    .btn:active { background: #1240ad; }
+    .btn:hover   { background: #1648c0; }
+    .btn:active  { background: #1240ad; }
     .btn:disabled { background: #93c5fd; cursor: not-allowed; }
 
-    /* Alert banners */
+    /* Alerts */
     .alert {
       display: none;
       padding: 12px 16px;
@@ -135,12 +138,11 @@
       margin-bottom: 18px;
       line-height: 1.4;
     }
-
-    .alert.show { display: block; }
+    .alert.show    { display: block; }
     .alert-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
     .alert-error   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
 
-    /* Error notice from URL param */
+    /* URL-param error banner (above card) */
     .url-error {
       background: #fef2f2;
       color: #991b1b;
@@ -151,7 +153,6 @@
       text-align: center;
       display: none;
     }
-
     .url-error.show { display: block; }
 
     .helper-text {
@@ -160,21 +161,14 @@
       color: #6b7280;
       margin-top: 18px;
     }
-
-    .helper-text a {
-      color: #1a56db;
-      text-decoration: none;
-      font-weight: 600;
-    }
-
+    .helper-text a { color: #1a56db; text-decoration: none; font-weight: 600; }
     .helper-text a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
 
-  <div style="width:100%;max-width:440px;">
+  <div style="width:100%;max-width:460px;">
 
-    <!-- URL-parameter error (e.g. expired link) -->
     <div class="url-error" id="urlError"></div>
 
     <div class="card">
@@ -183,7 +177,6 @@
         <p>Client Portal</p>
       </div>
 
-      <!-- Tabs -->
       <div class="tabs">
         <button class="tab-btn active" id="loginTab"    onclick="showTab('login')">Sign In</button>
         <button class="tab-btn"        id="registerTab" onclick="showTab('register')">Create Account</button>
@@ -191,7 +184,7 @@
 
       <div class="card-body">
 
-        <!-- ── LOGIN ── -->
+        <!-- ── SIGN IN ── -->
         <div class="form-panel active" id="loginPanel">
           <div class="alert" id="loginAlert"></div>
 
@@ -201,7 +194,17 @@
               <input type="email" id="loginEmail" name="email"
                      placeholder="you@example.com" required autocomplete="email" />
             </div>
-            <button class="btn" type="submit" id="loginBtn">Send Sign-In Link</button>
+
+            <div class="form-group">
+              <label for="loginPassword">Password</label>
+              <div class="input-wrap">
+                <input type="password" id="loginPassword" name="password"
+                       placeholder="Enter your password" required autocomplete="current-password" />
+                <button type="button" class="pw-toggle" onclick="togglePw('loginPassword', this)" aria-label="Show/hide password">👁</button>
+              </div>
+            </div>
+
+            <button class="btn" type="submit" id="loginBtn">Sign In</button>
           </form>
 
           <p class="helper-text">
@@ -210,7 +213,7 @@
           </p>
         </div>
 
-        <!-- ── REGISTER ── -->
+        <!-- ── CREATE ACCOUNT ── -->
         <div class="form-panel" id="registerPanel">
           <div class="alert" id="registerAlert"></div>
 
@@ -238,6 +241,26 @@
               <label for="cell">Cell Phone</label>
               <input type="tel" id="cell" name="cell"
                      placeholder="555-867-5309" required autocomplete="tel" />
+            </div>
+
+            <div class="form-group">
+              <label for="regPassword">Password</label>
+              <div class="input-wrap">
+                <input type="password" id="regPassword" name="password"
+                       placeholder="Create a password" required autocomplete="new-password"
+                       minlength="8" />
+                <button type="button" class="pw-toggle" onclick="togglePw('regPassword', this)" aria-label="Show/hide password">👁</button>
+              </div>
+              <p class="password-hint">Minimum 8 characters</p>
+            </div>
+
+            <div class="form-group">
+              <label for="confirmPassword">Confirm Password</label>
+              <div class="input-wrap">
+                <input type="password" id="confirmPassword" name="confirm_password"
+                       placeholder="Re-enter your password" required autocomplete="new-password" />
+                <button type="button" class="pw-toggle" onclick="togglePw('confirmPassword', this)" aria-label="Show/hide password">👁</button>
+              </div>
             </div>
 
             <button class="btn" type="submit" id="registerBtn">Create My Account</button>
@@ -277,45 +300,52 @@
       el.textContent = message;
     }
 
-    // ── URL error param (expired link etc.) ───────────────────────
+    // ── Password show/hide toggle ──────────────────────────────────
+    function togglePw(inputId, btn) {
+      const input = document.getElementById(inputId);
+      const show  = input.type === 'password';
+      input.type  = show ? 'text' : 'password';
+      btn.textContent = show ? '🙈' : '👁';
+    }
+
+    // ── URL error param ────────────────────────────────────────────
     (function checkUrlError() {
       const params = new URLSearchParams(window.location.search);
-      const error  = params.get('error');
       const msgs   = {
-        invalid_link:  'That sign-in link is invalid. Please request a new one.',
-        link_expired:  'That sign-in link has expired. Please request a new one.',
+        invalid_link:  'That verification link is invalid. Please register again or contact support.',
+        link_expired:  'That verification link has expired. Please register again.',
         server_error:  'Something went wrong. Please try again.',
       };
-      if (msgs[error]) {
+      const msg = msgs[params.get('error')];
+      if (msg) {
         const el = document.getElementById('urlError');
-        el.textContent = msgs[error];
+        el.textContent = msg;
         el.classList.add('show');
-        // Clean up the URL
         window.history.replaceState({}, '', '/');
       }
     })();
 
-    // ── Login ──────────────────────────────────────────────────────
+    // ── Sign In ────────────────────────────────────────────────────
     async function handleLogin(e) {
       e.preventDefault();
-      const btn   = document.getElementById('loginBtn');
-      const email = document.getElementById('loginEmail').value.trim();
-
-      btn.disabled = true;
-      btn.textContent = 'Sending…';
+      const btn = document.getElementById('loginBtn');
+      btn.disabled    = true;
+      btn.textContent = 'Signing in…';
       clearAlerts();
 
       try {
         const res  = await fetch('/api/auth/login', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ email }),
+          body:    JSON.stringify({
+            email:    document.getElementById('loginEmail').value.trim(),
+            password: document.getElementById('loginPassword').value,
+          }),
         });
         const data = await res.json();
 
         if (res.ok) {
-          showAlert('loginAlert', data.message, 'success');
-          document.getElementById('loginForm').reset();
+          window.location.href = '/dashboard.html';
         } else {
           showAlert('loginAlert', data.error ?? 'An error occurred.', 'error');
         }
@@ -323,30 +353,39 @@
         showAlert('loginAlert', 'Network error. Please try again.', 'error');
       } finally {
         btn.disabled    = false;
-        btn.textContent = 'Send Sign-In Link';
+        btn.textContent = 'Sign In';
       }
     }
 
-    // ── Register ───────────────────────────────────────────────────
+    // ── Create Account ─────────────────────────────────────────────
     async function handleRegister(e) {
       e.preventDefault();
+
+      const password        = document.getElementById('regPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (password !== confirmPassword) {
+        showAlert('registerAlert', 'Passwords do not match.', 'error');
+        return;
+      }
+
       const btn = document.getElementById('registerBtn');
       btn.disabled    = true;
       btn.textContent = 'Creating account…';
       clearAlerts();
 
-      const payload = {
-        first_name: document.getElementById('firstName').value.trim(),
-        last_name:  document.getElementById('lastName').value.trim(),
-        email:      document.getElementById('regEmail').value.trim(),
-        cell:       document.getElementById('cell').value.trim(),
-      };
-
       try {
         const res  = await fetch('/api/auth/register', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify(payload),
+          body:    JSON.stringify({
+            first_name:       document.getElementById('firstName').value.trim(),
+            last_name:        document.getElementById('lastName').value.trim(),
+            email:            document.getElementById('regEmail').value.trim(),
+            cell:             document.getElementById('cell').value.trim(),
+            password,
+            confirm_password: confirmPassword,
+          }),
         });
         const data = await res.json();
 

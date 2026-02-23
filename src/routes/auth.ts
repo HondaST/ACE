@@ -1,13 +1,15 @@
 import { Router, Request, Response } from 'express';
-import { registerUser, requestLoginToken, verifyToken } from '../services/authService';
+import { registerUser, loginUser, verifyEmailToken } from '../services/authService';
 
 const router = Router();
 
 /** POST /api/auth/register */
 router.post('/register', async (req: Request, res: Response) => {
-  const { first_name, last_name, email, cell } = req.body as Record<string, string>;
+  const { first_name, last_name, email, cell, password, confirm_password } =
+    req.body as Record<string, string>;
 
-  if (!first_name?.trim() || !last_name?.trim() || !email?.trim() || !cell?.trim()) {
+  if (!first_name?.trim() || !last_name?.trim() || !email?.trim() ||
+      !cell?.trim()        || !password          || !confirm_password) {
     res.status(400).json({ error: 'All fields are required.' });
     return;
   }
@@ -18,9 +20,25 @@ router.post('/register', async (req: Request, res: Response) => {
     return;
   }
 
+  if (password.length < 8) {
+    res.status(400).json({ error: 'Password must be at least 8 characters.' });
+    return;
+  }
+
+  if (password !== confirm_password) {
+    res.status(400).json({ error: 'Passwords do not match.' });
+    return;
+  }
+
   try {
-    await registerUser({ first_name: first_name.trim(), last_name: last_name.trim(), email: email.trim().toLowerCase(), cell: cell.trim() });
-    res.json({ message: 'Account created! Please check your email to verify your account.' });
+    await registerUser({
+      first_name:   first_name.trim(),
+      last_name:    last_name.trim(),
+      email:        email.trim().toLowerCase(),
+      cell:         cell.trim(),
+      password,
+    });
+    res.json({ message: 'Account created! Please check your email to verify your account before signing in.' });
   } catch (err: unknown) {
     if (err instanceof Error && err.message === 'EMAIL_EXISTS') {
       res.status(409).json({ error: 'An account with this email already exists.' });
@@ -31,43 +49,48 @@ router.post('/register', async (req: Request, res: Response) => {
   }
 });
 
-/** POST /api/auth/login  — requests a magic link */
+/** POST /api/auth/login */
 router.post('/login', async (req: Request, res: Response) => {
-  const { email } = req.body as Record<string, string>;
+  const { email, password } = req.body as Record<string, string>;
 
-  if (!email?.trim()) {
-    res.status(400).json({ error: 'Email is required.' });
+  if (!email?.trim() || !password) {
+    res.status(400).json({ error: 'Email and password are required.' });
     return;
   }
 
   try {
-    await requestLoginToken(email.trim().toLowerCase());
-    // Always return the same message so we don't reveal whether an account exists
-    res.json({ message: 'If an account exists for this email, a sign-in link has been sent.' });
-  } catch (err) {
+    const token = await loginUser(email.trim().toLowerCase(), password);
+
+    res.cookie('auth_token', token, {
+      httpOnly: true,
+      secure:   process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge:   7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    res.json({ message: 'Signed in successfully.' });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : '';
+    if (msg === 'INVALID_CREDENTIALS') {
+      res.status(401).json({ error: 'Incorrect email or password.' });
+      return;
+    }
+    if (msg === 'EMAIL_NOT_VERIFIED') {
+      res.status(403).json({ error: 'Please verify your email address before signing in.' });
+      return;
+    }
     console.error('[auth] login error:', err);
-    res.status(500).json({ error: 'Could not send login link. Please try again.' });
+    res.status(500).json({ error: 'Sign in failed. Please try again.' });
   }
 });
 
-/** GET /api/auth/verify/:token  — handles both email verification and magic-link login */
+/** GET /api/auth/verify/:token  — email verification */
 router.get('/verify/:token', async (req: Request, res: Response) => {
   const { token } = req.params;
 
   try {
-    const result = await verifyToken(token);
-
-    if (result.type === 'verify') {
-      res.redirect('/verified.html');
-    } else {
-      res.cookie('auth_token', result.jwt, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
-      res.redirect('/dashboard.html');
-    }
+    await verifyEmailToken(token);
+    res.redirect('/verified.html');
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : '';
     if (msg === 'TOKEN_INVALID') return void res.redirect('/?error=invalid_link');
