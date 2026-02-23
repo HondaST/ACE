@@ -1,0 +1,21 @@
+{
+  "name": "tax-paladin",
+  "version": "0.1.0",
+  "description": "Fullstack web application for tax preparation management",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "mssql": "^11.0.1"
+  },
+  "devDependencies": {
+    "@types/mssql": "^9.1.5",
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.0"
+  }
+}
