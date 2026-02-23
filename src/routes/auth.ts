@@ -86,7 +86,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
 /** GET /api/auth/verify/:token  — email verification */
 router.get('/verify/:token', async (req: Request, res: Response) => {
-  const { token } = req.params;
+  const token = String(req.params.token);
 
   try {
     await verifyEmailToken(token);
