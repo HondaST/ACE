@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(where npm)",
+      "Bash(where node)",
+      "Bash(node -e \":*)",
+      "Bash(git add .claude/ db/ middleware/ package-lock.json package.json public/ routes/ server.js)"
+    ]
+  }
+}
