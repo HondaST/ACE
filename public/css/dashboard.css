@@ -235,7 +235,7 @@ tbody tr.selected:hover td { background: #1a5fa8; }
 
 /* Message bubbles */
 .msg-bubble {
-  max-width: 96%;
+  width: 96%;
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 11px;
