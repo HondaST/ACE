@@ -6,7 +6,16 @@
       "Bash(where npm)",
       "Bash(where node)",
       "Bash(node -e \":*)",
-      "Bash(git add .claude/ db/ middleware/ package-lock.json package.json public/ routes/ server.js)"
+      "Bash(git add .claude/ db/ middleware/ package-lock.json package.json public/ routes/ server.js)",
+      "Bash(git commit:*)",
+      "Bash(git push -u origin claude/competent-panini)",
+      "Bash(gh pr:*)",
+      "Bash(where gh)",
+      "Bash(where winget)",
+      "Bash(node scripts/set-password.js)",
+      "Bash(git add server.js scripts/set-password.js)",
+      "Bash(git push)",
+      "Bash(git add .claude/settings.local.json)"
     ]
   }
 }
