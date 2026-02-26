@@ -94,10 +94,11 @@ body {
 }
 
 /* Section 3 — Tax entities + tabs */
-.section-3 { flex-shrink: 0; }
+.section-3 { flex-shrink: 0; margin-bottom: 12px; }
 
 #entities-panel {
-  max-height: 200px; /* header 23px + 5 rows × 35px = 198px — scrolls beyond 5 entities */
+  min-height: 198px; /* always shows space for 5 rows (header 23px + 5 × 35px) */
+  max-height: 198px; /* scrolls when more than 5 entities */
   overflow-y: auto;
 }
 
