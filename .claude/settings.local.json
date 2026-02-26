@@ -15,7 +15,8 @@
       "Bash(node scripts/set-password.js)",
       "Bash(git add server.js scripts/set-password.js)",
       "Bash(git push)",
-      "Bash(git add .claude/settings.local.json)"
+      "Bash(git add .claude/settings.local.json)",
+      "Bash(git add public/css/dashboard.css)"
     ]
   }
 }
