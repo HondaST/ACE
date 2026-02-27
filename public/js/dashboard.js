@@ -19,8 +19,8 @@ const DEMO_DATA = {
   ],
   taxYears:  [{ tax_year:2024 }, { tax_year:2023 }, { tax_year:2022 }],
   invoices:  [
-    { invoice_no:9832,  suie:1, tax_year:2024, inv_desc:'Tax Year 2024 tax return', inv_full_amount:250, inv_discount:10, inv_final_amount:240, inv_date:'2024-08-14', entityname:'Jones, Tom', taxidnumber:'111111122', bal_due:240 },
-    { invoice_no:12252, suie:1, tax_year:2024, inv_desc:'2024 Tax Return',           inv_full_amount:265, inv_discount:7,  inv_final_amount:258, inv_date:'2024-08-19', entityname:'Jones, Tom', taxidnumber:'111111122', bal_due:258 }
+    { invoice_no:9832,  suie:1, tax_year:2024, inv_desc:'Tax Year 2024 tax return', inv_full_amount:250, inv_discount:10, inv_final_amount:240, inv_date:'2024-08-14', entityname:'Jones, Tom', taxidnumber:'111111122', bal_due:240, prep:'Blakeborough, Alan', client_email:'tjones@test.com', client_cell:'631-555-1122' },
+    { invoice_no:12252, suie:1, tax_year:2024, inv_desc:'2024 Tax Return',           inv_full_amount:265, inv_discount:7,  inv_final_amount:258, inv_date:'2024-08-19', entityname:'Jones, Tom', taxidnumber:'111111122', bal_due:258, prep:'Blakeborough, Alan', client_email:'tjones@test.com', client_cell:'631-555-1122' }
   ],
   files:     [
     { file_info_id:1003, file_info_name:'Tax Paladin Overview.pdf', file_type_id:'Identity', file_size:86014, created_dt:'2025-07-28T11:33:00' },
@@ -106,8 +106,8 @@ function fmtTaxId(id) {
 
 function fmtInvDate(dt) {
   if (!dt) return '';
-  const d = new Date(dt);
-  return `${d.getMonth()+1}/${String(d.getDate()).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`;
+  const [yr, mo, dy] = String(dt).split('T')[0].split('-');
+  return `${parseInt(mo)}/${dy}/${yr}`;
 }
 
 /* ================================================================
@@ -265,7 +265,7 @@ async function loadInvoices(suie) {
   const invoices = rows.filter(r => r.invoice_no != null);
 
   if (!invoices.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="empty-row">No invoices found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" class="empty-row">No invoices found.</td></tr>';
     return;
   }
 
@@ -284,6 +284,9 @@ async function loadInvoices(suie) {
       <td class="num">${esc(inv.inv_final_amount)}</td>
       <td class="num">${esc(inv.bal_due)}</td>
       <td>${esc(fmtInvDate(inv.inv_date))}</td>
+      <td>${esc(inv.prep)}</td>
+      <td>${esc(inv.client_email)}</td>
+      <td>${esc(inv.client_cell)}</td>
     `;
     tr.addEventListener('click', () => selectInvoice(tr, inv));
     tbody.appendChild(tr);
@@ -301,6 +304,9 @@ async function loadInvoices(suie) {
     <td class="total-cell num">${totalDiscount}</td>
     <td class="total-cell num">${totalAmount}</td>
     <td class="total-cell num">${totalBalDue}</td>
+    <td></td>
+    <td></td>
+    <td></td>
     <td></td>
   `;
   tfoot.appendChild(tfr);
