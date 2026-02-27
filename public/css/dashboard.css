@@ -198,13 +198,52 @@ tbody tr.selected:hover td { background: #1a5fa8; }
 }
 .upload-btn { padding: 7px 36px; }
 
-.placeholder-msg {
-  padding: 12px;
-  color: #888;
-  font-style: italic;
+.hidden { display: none; }
+
+/* ── Invoices panel ───────────────────────────────────────── */
+.invoices-scroll {
+  min-height: 160px;
+  max-height: 160px;
+  overflow: auto;           /* horizontal + vertical scrollbars as needed */
 }
 
-.hidden { display: none; }
+.invoices-scroll table {
+  width: max-content;       /* allow table to exceed container → horizontal scroll */
+  min-width: 100%;
+}
+
+.invoices-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #e8ecf2;
+}
+
+.invoices-footer {
+  display: flex;
+  justify-content: center;
+  padding: 6px 0 4px;
+  border-top: 1px solid #ddd;
+}
+
+.action-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+#invoices-tfoot td {
+  border-bottom: none;
+}
+
+#invoices-tfoot .total-cell {
+  border-top: 2px solid #555;
+}
+
+/* Right-align numeric invoice columns */
+#invoices-table th.num,
+#invoices-table td.num {
+  text-align: right;
+}
 
 /* ═══════════════════════════════════════
    RIGHT PANEL

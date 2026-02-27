@@ -18,6 +18,10 @@ const DEMO_DATA = {
     { tax_entity:'Jones Consulting', tax_type:'LLC',      tax_professional:'Alan Blakeborough', suie:'E002', assigned_prep:'EMP1', cell:'', email:'' }
   ],
   taxYears:  [{ tax_year:2024 }, { tax_year:2023 }, { tax_year:2022 }],
+  invoices:  [
+    { invoice_no:9832,  suie:1, tax_year:2024, inv_desc:'Tax Year 2024 tax return', inv_full_amount:250, inv_discount:10, inv_final_amount:240, inv_date:'2024-08-14', entityname:'Jones, Tom', taxidnumber:'111111122', bal_due:240 },
+    { invoice_no:12252, suie:1, tax_year:2024, inv_desc:'2024 Tax Return',           inv_full_amount:265, inv_discount:7,  inv_final_amount:258, inv_date:'2024-08-19', entityname:'Jones, Tom', taxidnumber:'111111122', bal_due:258 }
+  ],
   files:     [
     { file_info_id:1003, file_info_name:'Tax Paladin Overview.pdf', file_type_id:'Identity', file_size:86014, created_dt:'2025-07-28T11:33:00' },
     { file_info_id:1004, file_info_name:'Tax Paladin Overview.pdf', file_type_id:'Identity', file_size:86014, created_dt:'2025-07-28T11:43:00' }
@@ -91,6 +95,19 @@ function esc(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function fmtTaxId(id) {
+  if (!id) return '';
+  const s = String(id).replace(/\D/g, '');
+  if (s.length === 9) return `${s.slice(0,3)}-${s.slice(3,5)}-${s.slice(5)}`;
+  return String(id);
+}
+
+function fmtInvDate(dt) {
+  if (!dt) return '';
+  const d = new Date(dt);
+  return `${d.getMonth()+1}/${String(d.getDate()).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`;
 }
 
 /* ================================================================
@@ -228,6 +245,74 @@ async function loadFiles(suie, year) {
 }
 
 /* ================================================================
+   SECTION 3 — Invoices table
+================================================================ */
+async function loadInvoices(suie) {
+  const rows = DEMO
+    ? DEMO_DATA.invoices
+    : await apiFetch(`${API}/invoices/${suie}`);
+  if (!rows) return;
+
+  const tbody = document.getElementById('invoices-tbody');
+  const tfoot = document.getElementById('invoices-tfoot');
+  tbody.innerHTML = '';
+  tfoot.innerHTML = '';
+
+  // Reset Pay button whenever list reloads
+  document.getElementById('pay-btn').disabled = true;
+
+  // Filter to rows that actually have an invoice (LEFT JOIN may return null invoice_no)
+  const invoices = rows.filter(r => r.invoice_no != null);
+
+  if (!invoices.length) {
+    tbody.innerHTML = '<tr><td colspan="10" class="empty-row">No invoices found.</td></tr>';
+    return;
+  }
+
+  let totalDiscount = 0, totalAmount = 0, totalBalDue = 0;
+
+  invoices.forEach(inv => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${esc(inv.entityname)}</td>
+      <td>${esc(fmtTaxId(inv.taxidnumber))}</td>
+      <td class="num">${esc(inv.invoice_no)}</td>
+      <td class="num">${esc(inv.tax_year)}</td>
+      <td>${esc(inv.inv_desc)}</td>
+      <td class="num">${esc(inv.inv_full_amount)}</td>
+      <td class="num">${esc(inv.inv_discount)}</td>
+      <td class="num">${esc(inv.inv_final_amount)}</td>
+      <td class="num">${esc(inv.bal_due)}</td>
+      <td>${esc(fmtInvDate(inv.inv_date))}</td>
+    `;
+    tr.addEventListener('click', () => selectInvoice(tr, inv));
+    tbody.appendChild(tr);
+
+    totalDiscount += Number(inv.inv_discount)    || 0;
+    totalAmount   += Number(inv.inv_final_amount) || 0;
+    totalBalDue   += Number(inv.bal_due)          || 0;
+  });
+
+  // Totals row
+  const tfr = document.createElement('tr');
+  tfr.innerHTML = `
+    <td colspan="5"></td>
+    <td class="total-cell"></td>
+    <td class="total-cell num">${totalDiscount}</td>
+    <td class="total-cell num">${totalAmount}</td>
+    <td class="total-cell num">${totalBalDue}</td>
+    <td></td>
+  `;
+  tfoot.appendChild(tfr);
+}
+
+function selectInvoice(row, inv) {
+  document.querySelectorAll('#invoices-tbody tr').forEach(r => r.classList.remove('selected'));
+  row.classList.add('selected');
+  document.getElementById('pay-btn').disabled = !(Number(inv.bal_due) > 0);
+}
+
+/* ================================================================
    SECTION 6 — Chat messages
 ================================================================ */
 async function loadMessages(suie) {
@@ -333,6 +418,11 @@ function bindTabs() {
     document.getElementById('tab-entities').classList.remove('active');
     document.getElementById('invoices-panel').classList.remove('hidden');
     document.getElementById('entities-panel').classList.add('hidden');
+    loadInvoices(currentSuie);
+  });
+
+  document.getElementById('pay-btn').addEventListener('click', () => {
+    alert('Payment functionality will be defined separately.');
   });
 }
 

@@ -63,9 +63,33 @@
           </table>
         </div>
 
-        <!-- Invoices panel (to be defined separately) -->
+        <!-- Invoices panel -->
         <div id="invoices-panel" class="hidden">
-          <p class="placeholder-msg">Invoices will be defined separately.</p>
+          <div class="invoices-scroll">
+            <table id="invoices-table">
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th>Tax Number</th>
+                  <th>Invoice</th>
+                  <th>Tax<br>Year</th>
+                  <th>Invoice<br>Desc</th>
+                  <th>Form<br>Fee</th>
+                  <th>Discount</th>
+                  <th>Invoice<br>Amount</th>
+                  <th>Bal Due</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="invoices-tbody">
+                <tr><td colspan="10" class="empty-row">Loading…</td></tr>
+              </tbody>
+              <tfoot id="invoices-tfoot"></tfoot>
+            </table>
+          </div>
+          <div class="invoices-footer">
+            <button class="action-btn" id="pay-btn" disabled>Pay</button>
+          </div>
         </div>
       </div><!-- /section-3 -->
 
