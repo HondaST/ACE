@@ -143,7 +143,7 @@ router.get('/invoices/:suie', async (req, res) => {
   try {
     const pool = await getPool();
     const result = await pool.request()
-      .input('suie', sql.Int, parseInt(req.params.suie))
+      .input('suie', sql.NVarChar(50), String(req.params.suie))
       .query(`
         SELECT i.invoice_no,
                i.tax_year,

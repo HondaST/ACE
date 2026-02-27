@@ -251,7 +251,6 @@ async function loadInvoices(suie) {
   const rows = DEMO
     ? DEMO_DATA.invoices
     : await apiFetch(`${API}/invoices/${suie}`);
-  if (!rows) return;
 
   const tbody = document.getElementById('invoices-tbody');
   const tfoot = document.getElementById('invoices-tfoot');
@@ -260,6 +259,12 @@ async function loadInvoices(suie) {
 
   // Reset Pay button whenever list reloads
   document.getElementById('pay-btn').disabled = true;
+
+  if (!Array.isArray(rows)) {
+    const msg = (rows && rows.error) ? `Error: ${esc(rows.error)}` : 'Error loading invoices.';
+    tbody.innerHTML = `<tr><td colspan="13" class="empty-row">${msg}</td></tr>`;
+    return;
+  }
 
   // Filter to rows that actually have an invoice (LEFT JOIN may return null invoice_no)
   const invoices = rows.filter(r => r.invoice_no != null);
