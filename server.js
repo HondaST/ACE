@@ -7,6 +7,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
+// Raw body parser for file uploads — must come BEFORE express.json() so the
+// octet-stream body isn't consumed before the upload route can read it.
+app.use('/api/client/upload', express.raw({ type: '*/*', limit: '100mb' }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 

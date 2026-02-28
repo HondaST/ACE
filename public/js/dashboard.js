@@ -9,6 +9,8 @@ const DEMO = new URLSearchParams(location.search).has('demo');
 // State
 let currentSuie   = null;   // selected tax entity unique id
 let currentPrepId = null;   // assigned_prep emp_id for sending messages
+let currentYear   = null;   // selected tax year
+let pendingFile   = null;   // file awaiting type selection
 
 /* ── Demo / mock data (activated via ?demo in URL) ───────── */
 const DEMO_DATA = {
@@ -207,6 +209,7 @@ async function loadTaxYears(suie) {
 function selectYear(el, year) {
   document.querySelectorAll('.year-item').forEach(y => y.classList.remove('selected'));
   el.classList.add('selected');
+  currentYear = year;
   loadFiles(currentSuie, year);
 }
 
@@ -240,8 +243,28 @@ async function loadFiles(suie, year) {
       <td>${fmtDateShort(f.created_dt)}</td>
       <td>${esc(f.file_size)}</td>
     `;
+    tr.addEventListener('dblclick', () => openFile(f.file_info_id));
     tbody.appendChild(tr);
   });
+}
+
+async function openFile(fileInfoId) {
+  const token = getToken();
+  try {
+    const res = await fetch(`${API}/files/${fileInfoId}/open`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(`Could not open file: ${err.error || res.statusText}`);
+      return;
+    }
+    const blob      = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    window.open(objectUrl, '_blank');
+  } catch (e) {
+    alert(`Could not open file: ${e.message}`);
+  }
 }
 
 /* ================================================================
@@ -448,11 +471,116 @@ function bindNewEntity() {
 }
 
 /* ================================================================
-   SECTION 8 — Upload (separate definition — placeholder)
+   SECTION 8 — Upload (button + drag-and-drop)
 ================================================================ */
 function bindUpload() {
+  const fileInput = document.getElementById('file-input');
+  const dropZone  = document.querySelector('.section-5');
+
+  // Upload button → open file dialog
   document.getElementById('upload-btn').addEventListener('click', () => {
-    // Upload functionality to be defined separately
-    alert('Upload functionality will be defined separately.');
+    if (!currentSuie) { alert('Please select a tax entity first.'); return; }
+    fileInput.click();
   });
+
+  // File dialog selection → show file-type modal
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) showFileTypeModal(fileInput.files[0]);
+    fileInput.value = ''; // reset so the same file can be re-selected
+  });
+
+  // Drag over section-5 — highlight drop zone
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('drop-zone-active');
+  });
+
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('drop-zone-active');
+  });
+
+  // Drop → show file-type modal
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drop-zone-active');
+    if (!currentSuie) { alert('Please select a tax entity first.'); return; }
+    const file = e.dataTransfer.files[0];
+    if (file) showFileTypeModal(file);
+  });
+
+  // Modal buttons
+  document.getElementById('modal-upload-btn').addEventListener('click', () => {
+    const sel = document.getElementById('filetype-select');
+    if (!sel.value) { alert('Please select a file type.'); return; }
+    hideFileTypeModal();
+    uploadFile(pendingFile, sel.value);
+  });
+
+  document.getElementById('modal-cancel-btn').addEventListener('click', () => {
+    hideFileTypeModal();
+    pendingFile = null;
+  });
+}
+
+async function showFileTypeModal(file) {
+  pendingFile = file;
+
+  // Populate filename label
+  document.getElementById('modal-filename').textContent = `File: ${file.name}`;
+
+  // Load file types and populate dropdown
+  const sel   = document.getElementById('filetype-select');
+  sel.innerHTML = '<option value="">— choose —</option>';
+
+  const types = await apiFetch(`${API}/file-types`);
+  if (types && types.length) {
+    types.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value       = t.file_type_id;
+      opt.textContent = t.file_type_desc;
+      sel.appendChild(opt);
+    });
+  }
+
+  document.getElementById('filetype-overlay').classList.remove('hidden');
+}
+
+function hideFileTypeModal() {
+  document.getElementById('filetype-overlay').classList.add('hidden');
+  document.getElementById('filetype-select').value = '';
+}
+
+async function uploadFile(file, fileTypeId) {
+  const token = getToken();
+
+  // Read file as raw bytes — avoids all multipart parsing complexity
+  const arrayBuffer = await file.arrayBuffer();
+
+  // All metadata goes in the URL; only the raw bytes go in the body
+  let url = `${API}/upload/${encodeURIComponent(currentSuie)}`
+          + `?file_type_id=${encodeURIComponent(fileTypeId)}`
+          + `&filename=${encodeURIComponent(file.name)}`;
+  if (currentYear) url += `&tax_year=${encodeURIComponent(currentYear)}`;
+
+  try {
+    const res = await fetch(url, {
+      method:  'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type':  'application/octet-stream'
+      },
+      body: arrayBuffer
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      alert(`Upload failed: ${data.error || res.statusText}`);
+      return;
+    }
+
+    // Refresh the files list to show the newly uploaded file
+    loadFiles(currentSuie, currentYear);
+  } catch (e) {
+    alert(`Upload failed: ${e.message}`);
+  }
 }

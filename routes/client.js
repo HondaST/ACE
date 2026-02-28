@@ -1,7 +1,9 @@
 const express = require('express');
-const router = express.Router();
+const router  = express.Router();
+const path    = require('path');
+const fs      = require('fs');
 const { sql, getPool } = require('../db');
-const auth = require('../middleware/auth');
+const auth    = require('../middleware/auth');
 
 router.use(auth);
 
@@ -58,10 +60,10 @@ router.get('/entities/:suie/tax-years', async (req, res) => {
     const result = await pool.request()
       .input('suie', sql.NVarChar(50), req.params.suie)
       .query(`
-        SELECT DISTINCT tax_year
+        SELECT DISTINCT file_info.tax_year
         FROM   file_info
-        WHERE  suie = @suie
-        ORDER BY tax_year DESC
+        WHERE  file_info.suie = @suie
+        ORDER BY file_info.tax_year DESC
       `);
     res.json(result.recordset);
   } catch (err) {
@@ -98,6 +100,124 @@ router.get('/entities/:suie/files', async (req, res) => {
 
     const result = await request.query(query);
     res.json(result.recordset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// File type lookup — dropdown choices for upload
+router.get('/file-types', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .query(`
+        SELECT file_type_id,
+               file_type_desc
+        FROM   file_type
+        ORDER BY file_type_desc
+      `);
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Section 5b — Open / serve a file by file_info_id
+router.get('/files/:fileInfoId/open', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('fileInfoId', sql.Int, parseInt(req.params.fileInfoId))
+      .input('sui',        sql.Int, req.user.sui)
+      .query(`
+        SELECT fi.file_info_id,
+               fi.file_info_name,
+               fi.suie,
+               pe.sui
+        FROM   file_info     fi
+        JOIN   people_entity pe ON fi.suie = pe.suie
+        WHERE  fi.file_info_id = @fileInfoId
+          AND  pe.sui          = @sui
+      `);
+
+    if (!result.recordset.length) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    const f        = result.recordset[0];
+    const fileName = `${f.file_info_id}-${f.file_info_name}`;
+    const filePath = path.join(
+      'C:\\projects\\ace\\repository',
+      String(f.sui),
+      String(f.suie),
+      fileName
+    );
+
+    res.sendFile(filePath);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Section 5c — Upload a file for a given entity / tax year
+//   File bytes arrive as application/octet-stream in req.body (Buffer).
+//   All metadata (suie, file_type_id, tax_year, filename) travel in the URL.
+const rawBody = express.raw({ type: '*/*', limit: '100mb' });
+
+router.post('/upload/:suie', rawBody, async (req, res) => {
+  try {
+    const suie         = req.params.suie;
+    const file_type_id = req.query.file_type_id;
+    const tax_year     = req.query.tax_year;
+    const filename     = req.query.filename;
+    const fileBuffer   = req.body; // Buffer from express.raw()
+
+    if (!suie || !file_type_id || !filename || !Buffer.isBuffer(fileBuffer) || !fileBuffer.length) {
+      return res.status(400).json({ error: 'suie, file_type_id, filename, and file body are required' });
+    }
+
+    const pool = await getPool();
+
+    // Validate suie belongs to the logged-in user and retrieve sui
+    const entityCheck = await pool.request()
+      .input('suie', sql.NVarChar(50), suie)
+      .input('sui',  sql.Int,          req.user.sui)
+      .query(`
+        SELECT sui
+        FROM   people_entity
+        WHERE  suie = @suie
+          AND  sui  = @sui
+      `);
+
+    if (!entityCheck.recordset.length) {
+      return res.status(403).json({ error: 'Entity not found or access denied' });
+    }
+
+    const sui = entityCheck.recordset[0].sui;
+
+    // Insert file_info row and capture the new file_info_id
+    const insertResult = await pool.request()
+      .input('suie',           sql.NVarChar(50),      suie)
+      .input('tax_year',       sql.Int,               tax_year ? parseInt(tax_year) : null)
+      .input('file_type_id',   sql.NVarChar(50),      file_type_id)
+      .input('file_info_name', sql.NVarChar(500),     filename)
+      .input('file_size',      sql.Int,               fileBuffer.length)
+      .query(`
+        INSERT INTO file_info (suie, tax_year, file_type_id, file_info_name, file_size, created_dt)
+        OUTPUT INSERTED.file_info_id
+        VALUES (@suie, @tax_year, @file_type_id, @file_info_name, @file_size, GETDATE())
+      `);
+
+    const fileInfoId = insertResult.recordset[0].file_info_id;
+
+    // Ensure the destination directory exists then write the file
+    const dir      = path.join('C:\\projects\\ace\\repository', String(sui), String(suie));
+    const destPath = path.join(dir, `${fileInfoId}-${filename}`);
+
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(destPath, fileBuffer);
+
+    res.json({ success: true, file_info_id: fileInfoId });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
