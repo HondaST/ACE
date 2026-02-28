@@ -510,10 +510,11 @@ function bindUpload() {
 
   // Modal buttons
   document.getElementById('modal-upload-btn').addEventListener('click', () => {
-    const sel = document.getElementById('filetype-select');
-    if (!sel.value) { alert('Please select a file type.'); return; }
+    const sel        = document.getElementById('filetype-select');
+    const fileTypeId = sel.value;           // capture BEFORE hideFileTypeModal clears it
+    if (!fileTypeId) { alert('Please select a file type.'); return; }
     hideFileTypeModal();
-    uploadFile(pendingFile, sel.value);
+    uploadFile(pendingFile, fileTypeId);
   });
 
   document.getElementById('modal-cancel-btn').addEventListener('click', () => {
