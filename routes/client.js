@@ -324,7 +324,7 @@ router.post('/messages', async (req, res) => {
       .input('text',     sql.NVarChar(sql.MAX), text)
       .input('suie',     sql.NVarChar(50),      suie)
       .input('to_id',    sql.NVarChar(50),      String(to_id))
-      .input('from_id',  sql.NVarChar(50),      String(req.user.sui))
+      .input('from_id',  sql.NVarChar(50),      String(suie))
       .query(`
         INSERT INTO msg_queue (msg_subject, msg_text, sent_by_id, to_id, from_id, msg_create_dt, suie)
         VALUES (@subject, @text, 'C', @to_id, @from_id, GETDATE(), @suie)
