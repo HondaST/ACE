@@ -269,6 +269,173 @@ tbody tr.selected:hover td { background: #1a5fa8; }
   gap: 8px;
 }
 
+/* ── New Entity Type modal ───────────────────────────────── */
+.entity-type-modal {
+  min-width: 500px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.modal-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #dde2ea;
+  border-bottom: 1px solid #bbb;
+  padding: 6px 12px;
+  border-radius: 8px 8px 0 0;
+}
+
+.modal-titlebar span {
+  font-size: 12px;
+  font-weight: bold;
+  color: #1a3a5c;
+}
+
+.modal-close-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: #555;
+  padding: 0 4px;
+  line-height: 1;
+}
+.modal-close-btn:hover { color: #000; }
+
+.entity-type-desc {
+  padding: 16px 20px 10px;
+  font-size: 12px;
+  color: #333;
+  text-align: center;
+}
+
+.entity-type-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  padding: 10px 32px 18px;
+}
+
+.entity-type-option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.entity-type-option input[type="radio"] {
+  cursor: pointer;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.entity-type-buttons {
+  justify-content: center;
+  gap: 24px;
+  padding: 10px 0 16px;
+  border-top: 1px solid #ddd;
+}
+
+/* ── Create Tax Entity modal ─────────────────────────────── */
+.create-entity-modal {
+  width: 580px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.ce-body {
+  padding: 10px 18px 6px;
+}
+
+.ce-top-row {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin-bottom: 7px;
+}
+
+.ce-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ce-form-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+
+.ce-label {
+  font-size: 12px;
+  color: #333;
+  white-space: nowrap;
+}
+
+.ce-label-right {
+  min-width: 110px;
+  text-align: right;
+}
+
+.ce-input-sm    { width: 90px; }
+.ce-input-date  { width: 180px; background: #f4f4f4 !important; }
+.ce-input-wide  { flex: 1; }
+.ce-input-med   { width: 200px; }
+.ce-input-state { width: 34px; text-transform: uppercase; }
+.ce-select-sm   { width: 150px; }
+.ce-select-med  { width: 200px; }
+
+.ce-input-sm,
+.ce-input-date,
+.ce-input-wide,
+.ce-input-med,
+.ce-input-state {
+  border: 1px solid #bbb;
+  border-radius: 2px;
+  padding: 3px 5px;
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+}
+
+.ce-select-sm,
+.ce-select-med {
+  border: 1px solid #bbb;
+  border-radius: 2px;
+  padding: 3px 5px;
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+}
+
+.ce-body input[readonly],
+.ce-body select[disabled] {
+  background: #f0f0f0;
+  color: #555;
+  cursor: default;
+}
+
+.ce-personal-hint {
+  color: #cc0000;
+  font-size: 11px;
+  margin-bottom: 4px;
+  padding-left: 116px;
+}
+
+.ce-divider {
+  border: none;
+  border-top: 1px solid #ccc;
+  margin: 8px 0 6px;
+}
+
+.ce-footer {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  padding: 10px 0 14px;
+  border-top: 1px solid #ddd;
+}
+
 /* ── Invoices panel ───────────────────────────────────────── */
 .invoices-scroll {
   min-height: 160px;

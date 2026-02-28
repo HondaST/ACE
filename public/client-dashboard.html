@@ -168,6 +168,141 @@
   <!-- Hidden file input for upload dialog -->
   <input type="file" id="file-input" style="display:none">
 
+  <!-- New Tax Entity Type modal -->
+  <div id="entity-type-overlay" class="modal-overlay hidden">
+    <div class="modal-box entity-type-modal">
+      <div class="modal-titlebar">
+        <span>New Tax Entity Type</span>
+        <button class="modal-close-btn" id="entity-type-close">&#x2715;</button>
+      </div>
+      <div class="entity-type-desc">Please select the type of Tax Return this Tax Entity needs</div>
+      <div class="entity-type-grid">
+        <label class="entity-type-option"><input type="radio" name="entity-type" value="PERS">        Personal Return (1040)</label>
+        <label class="entity-type-option"><input type="radio" name="entity-type" value="LLC">         Limited Liability Corp (LLC)</label>
+        <label class="entity-type-option"><input type="radio" name="entity-type" value="CCORP">       C Corporation (1120)</label>
+        <label class="entity-type-option"><input type="radio" name="entity-type" value="SCORP">       S Corporation (1120s)</label>
+        <label class="entity-type-option"><input type="radio" name="entity-type" value="PART">        Partnership (1065)</label>
+        <label class="entity-type-option"><input type="radio" name="entity-type" value="FIDUCIARY">   Fiduciary/Trust (1041)</label>
+        <label class="entity-type-option"><input type="radio" name="entity-type" value="ESTATE">      Estate</label>
+        <label class="entity-type-option"><input type="radio" name="entity-type" value="BENEF">       Beneficiary (8791)</label>
+        <label class="entity-type-option"><input type="radio" name="entity-type" value="EXEMPT">      Exempt</label>
+        <label class="entity-type-option"><input type="radio" name="entity-type" value="GIFT">        Gift (709)</label>
+      </div>
+      <div class="modal-buttons entity-type-buttons">
+        <button class="action-btn" id="entity-type-select-btn">Select</button>
+        <button class="action-btn" id="entity-type-cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Tax Entity modal -->
+  <div id="create-entity-overlay" class="modal-overlay hidden">
+    <div class="modal-box create-entity-modal">
+      <div class="modal-titlebar">
+        <span>Create Tax Entity</span>
+        <button class="modal-close-btn" id="ce-close-x">&#x2715;</button>
+      </div>
+      <div class="ce-body">
+
+        <!-- Row 1: Entity ID + Created Date -->
+        <div class="ce-top-row">
+          <div class="ce-inline">
+            <label class="ce-label">Entity ID:</label>
+            <input type="text" id="ce-entity-id" class="ce-input-sm" readonly placeholder="Auto">
+          </div>
+          <div class="ce-inline">
+            <label class="ce-label">Created Date:</label>
+            <input type="text" id="ce-created-date" class="ce-input-date" readonly>
+          </div>
+        </div>
+
+        <!-- Tax ID Number (optional) -->
+        <div class="ce-form-row">
+          <label class="ce-label ce-label-right">Tax ID Number:</label>
+          <input type="text" id="ce-taxid" class="ce-input-sm">
+        </div>
+
+        <!-- Personal section: shown only for PERS -->
+        <div id="ce-personal-section" class="hidden">
+          <div class="ce-personal-hint">Enter First and Last name for personal tax returns</div>
+          <div class="ce-form-row">
+            <label class="ce-label ce-label-right">First Name:</label>
+            <input type="text" id="ce-first-name" class="ce-input-wide">
+          </div>
+          <div class="ce-form-row">
+            <label class="ce-label ce-label-right">Last Name:</label>
+            <input type="text" id="ce-last-name" class="ce-input-wide">
+          </div>
+        </div>
+
+        <!-- Non-personal section: shown for all other entity types -->
+        <div id="ce-nonpersonal-section" class="hidden">
+          <div class="ce-personal-hint">Enter the tax Entity Name</div>
+          <div class="ce-form-row">
+            <label class="ce-label ce-label-right">Entity Name:</label>
+            <input type="text" id="ce-entity-name" class="ce-input-wide">
+          </div>
+        </div>
+
+        <hr class="ce-divider">
+
+        <!-- Street -->
+        <div class="ce-form-row">
+          <label class="ce-label ce-label-right">Street:</label>
+          <input type="text" id="ce-street" class="ce-input-wide">
+        </div>
+
+        <!-- City -->
+        <div class="ce-form-row">
+          <label class="ce-label ce-label-right">City:</label>
+          <input type="text" id="ce-city" class="ce-input-med">
+        </div>
+
+        <!-- State -->
+        <div class="ce-form-row">
+          <label class="ce-label ce-label-right">State:</label>
+          <input type="text" id="ce-state" class="ce-input-state" maxlength="2">
+        </div>
+
+        <!-- Zipcode -->
+        <div class="ce-form-row">
+          <label class="ce-label ce-label-right">Zipcode:</label>
+          <input type="text" id="ce-zipcode" class="ce-input-sm">
+        </div>
+
+        <!-- Entity Type (pre-set, disabled) -->
+        <div class="ce-form-row">
+          <label class="ce-label ce-label-right">Entity Type:</label>
+          <select id="ce-entity-type" class="ce-select-sm" disabled></select>
+        </div>
+
+        <!-- Cell -->
+        <div class="ce-form-row">
+          <label class="ce-label ce-label-right">Cell:</label>
+          <input type="text" id="ce-cell" class="ce-input-med">
+        </div>
+
+        <!-- Email -->
+        <div class="ce-form-row">
+          <label class="ce-label ce-label-right">Email:</label>
+          <input type="text" id="ce-email" class="ce-input-wide">
+        </div>
+
+        <!-- Assigned Prep (optional) -->
+        <div class="ce-form-row">
+          <label class="ce-label ce-label-right">Assigned Prep:</label>
+          <select id="ce-assigned-prep" class="ce-select-med"></select>
+        </div>
+
+      </div><!-- /ce-body -->
+      <div class="ce-footer">
+        <button class="action-btn" id="ce-print-btn">Print</button>
+        <button class="action-btn" id="ce-save-btn">Save</button>
+        <button class="action-btn" id="ce-close-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- File type selection modal -->
   <div id="filetype-overlay" class="modal-overlay hidden">
     <div class="modal-box">

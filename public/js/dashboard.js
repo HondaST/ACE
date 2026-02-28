@@ -461,13 +461,160 @@ function bindTabs() {
 }
 
 /* ================================================================
-   SECTION 2 — New Entity (separate window — placeholder)
+   SECTION 2 — New Entity type selection modal
 ================================================================ */
 function bindNewEntity() {
+  const overlay   = document.getElementById('entity-type-overlay');
+  const radios    = () => document.querySelectorAll('input[name="entity-type"]');
+  const closeModal = () => {
+    overlay.classList.add('hidden');
+    radios().forEach(r => r.checked = false);
+  };
+
+  // Open modal
   document.getElementById('new-entity-btn').addEventListener('click', () => {
-    // New Entity window to be defined separately
-    alert('New Entity window will be defined separately.');
+    radios().forEach(r => r.checked = false);
+    overlay.classList.remove('hidden');
   });
+
+  // X button
+  document.getElementById('entity-type-close').addEventListener('click', closeModal);
+
+  // Cancel button
+  document.getElementById('entity-type-cancel-btn').addEventListener('click', closeModal);
+
+  // Select button — capture chosen type, then proceed to next step
+  document.getElementById('entity-type-select-btn').addEventListener('click', () => {
+    const selected = document.querySelector('input[name="entity-type"]:checked');
+    if (!selected) { alert('Please select a tax entity type.'); return; }
+    closeModal();
+    startNewEntity(selected.value);
+  });
+
+
+  // === Create Entity modal buttons ===
+  document.getElementById('ce-close-x').addEventListener('click',   closeCeModal);
+  document.getElementById('ce-close-btn').addEventListener('click', closeCeModal);
+  document.getElementById('ce-save-btn').addEventListener('click',  saveNewEntity);
+  document.getElementById('ce-print-btn').addEventListener('click', () => window.print());
+}
+
+function closeCeModal() {
+  document.getElementById('create-entity-overlay').classList.add('hidden');
+}
+
+// Opens the Create Entity form pre-set to the chosen entityType (et_id)
+async function startNewEntity(etId) {
+  const isPersonal = etId === 'PERS';
+
+  // Auto-fill created date
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  document.getElementById('ce-created-date').value =
+    `${now.getMonth()+1}/${now.getDate()}/${now.getFullYear()} ` +
+    `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+  // Clear all editable fields
+  ['ce-entity-id','ce-taxid','ce-first-name','ce-last-name','ce-entity-name',
+   'ce-street','ce-city','ce-state','ce-zipcode','ce-cell','ce-email'
+  ].forEach(id => { document.getElementById(id).value = ''; });
+
+  // Toggle personal vs non-personal name section
+  document.getElementById('ce-personal-section').classList.toggle('hidden', !isPersonal);
+  document.getElementById('ce-nonpersonal-section').classList.toggle('hidden', isPersonal);
+
+  // Populate Entity Type dropdown (disabled — pre-set from type screen)
+  await loadEntityTypesForForm(etId);
+
+  // Populate Assigned Prep dropdown
+  await loadPreparersForForm();
+
+  document.getElementById('create-entity-overlay').classList.remove('hidden');
+}
+
+async function loadEntityTypesForForm(selectedEtId) {
+  const sel = document.getElementById('ce-entity-type');
+  sel.innerHTML = '';
+  const types = await apiFetch(`${API}/entity-types`);
+  if (types && types.length) {
+    types.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value       = t.et_id;
+      opt.textContent = t.et_desc;
+      if (t.et_id === selectedEtId) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  } else {
+    // Fallback: add just the selected value if API fails
+    const opt = document.createElement('option');
+    opt.value = selectedEtId;
+    opt.textContent = selectedEtId;
+    sel.appendChild(opt);
+  }
+}
+
+async function loadPreparersForForm() {
+  const sel = document.getElementById('ce-assigned-prep');
+  sel.innerHTML = '<option value="">— optional —</option>';
+  const preps = await apiFetch(`${API}/preparers`);
+  if (preps && preps.length) {
+    preps.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value       = p.emp_id;
+      opt.textContent = `${p.last_name}, ${p.first_name}`;
+      sel.appendChild(opt);
+    });
+  }
+}
+
+async function saveNewEntity() {
+  const entityType   = document.getElementById('ce-entity-type').value;
+  const isPersonal   = entityType === 'PERS';
+  const firstName    = isPersonal ? document.getElementById('ce-first-name').value.trim() : null;
+  const lastName     = isPersonal ? document.getElementById('ce-last-name').value.trim()  : null;
+  const entityName   = !isPersonal ? document.getElementById('ce-entity-name').value.trim() : null;
+  const street       = document.getElementById('ce-street').value.trim();
+  const city         = document.getElementById('ce-city').value.trim();
+  const state        = document.getElementById('ce-state').value.trim();
+  const zipcode      = document.getElementById('ce-zipcode').value.trim();
+  const cell         = document.getElementById('ce-cell').value.trim();
+  const email        = document.getElementById('ce-email').value.trim();
+  const taxid        = document.getElementById('ce-taxid').value.trim();
+  const assignedPrep = document.getElementById('ce-assigned-prep').value;
+
+  // Validate required fields (taxid and assigned_prep are optional)
+  if (isPersonal) {
+    if (!firstName) { alert('First Name is required.'); return; }
+    if (!lastName)  { alert('Last Name is required.');  return; }
+  } else {
+    if (!entityName) { alert('Entity Name is required.'); return; }
+  }
+  if (!street)  { alert('Street is required.');  return; }
+  if (!city)    { alert('City is required.');    return; }
+  if (!state)   { alert('State is required.');   return; }
+  if (!zipcode) { alert('Zipcode is required.'); return; }
+  if (!cell)    { alert('Cell is required.');    return; }
+  if (!email)   { alert('Email is required.');   return; }
+
+  const result = await apiFetch(`${API}/entities`, {
+    method: 'POST',
+    body: JSON.stringify({
+      entity_type:  entityType,
+      taxidnumber:  taxid      || null,
+      first_name:   firstName,
+      last_name:    lastName,
+      entity_name:  entityName,
+      street, city, state, zipcode, cell, email,
+      assigned_prep: assignedPrep || null
+    })
+  });
+
+  if (result && result.suie) {
+    document.getElementById('ce-entity-id').value = result.suie;
+    loadEntities();   // refresh the entities list
+  } else if (result && result.error) {
+    alert(`Save failed: ${result.error}`);
+  }
 }
 
 /* ================================================================

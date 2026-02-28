@@ -336,4 +336,83 @@ router.post('/messages', async (req, res) => {
   }
 });
 
+// Entity types lookup — populates the Entity Type dropdown
+router.get('/entity-types', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .query(`SELECT et_id, et_desc FROM entity_type ORDER BY et_desc`);
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Preparers lookup — populates the Assigned Prep dropdown
+router.get('/preparers', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .query(`SELECT emp_id, first_name, last_name FROM employee ORDER BY last_name, first_name`);
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Create a new tax entity for the logged-in client
+router.post('/entities', async (req, res) => {
+  try {
+    const {
+      entity_type, taxidnumber,
+      first_name, last_name, entity_name,
+      street, city, state, zipcode,
+      cell, email, assigned_prep
+    } = req.body;
+
+    const isPersonal = entity_type === 'PERS';
+
+    // Server-side required-field validation
+    if (!entity_type)                           return res.status(400).json({ error: 'Entity type is required' });
+    if (isPersonal && (!first_name || !last_name)) return res.status(400).json({ error: 'First Name and Last Name are required' });
+    if (!isPersonal && !entity_name)            return res.status(400).json({ error: 'Entity Name is required' });
+    if (!street || !city || !state || !zipcode || !cell || !email)
+      return res.status(400).json({ error: 'Street, City, State, Zipcode, Cell and Email are required' });
+
+    // entityname stored in DB: "Last, First" for personal; entity_name for others
+    const entityname = isPersonal
+      ? `${last_name}, ${first_name}`
+      : entity_name;
+
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('sui',           sql.Int,           req.user.sui)
+      .input('entity_type',   sql.NVarChar(50),  entity_type)
+      .input('taxidnumber',   sql.NVarChar(50),  taxidnumber  || null)
+      .input('first_name',    sql.NVarChar(100), first_name   || null)
+      .input('last_name',     sql.NVarChar(100), last_name    || null)
+      .input('entityname',    sql.NVarChar(200), entityname)
+      .input('street',        sql.NVarChar(200), street)
+      .input('city',          sql.NVarChar(100), city)
+      .input('state',         sql.NVarChar(2),   state.toUpperCase())
+      .input('zipcode',       sql.NVarChar(20),  zipcode)
+      .input('cell',          sql.NVarChar(50),  cell)
+      .input('email',         sql.NVarChar(200), email)
+      .input('assigned_prep', sql.NVarChar(50),  assigned_prep ? String(assigned_prep) : null)
+      .query(`
+        INSERT INTO people_entity
+          (sui, entity_type, taxidnumber, first_name, last_name, entityname,
+           street, city, state, zipcode, cell, email, assigned_prep)
+        OUTPUT INSERTED.suie
+        VALUES
+          (@sui, @entity_type, @taxidnumber, @first_name, @last_name, @entityname,
+           @street, @city, @state, @zipcode, @cell, @email, @assigned_prep)
+      `);
+
+    res.json({ success: true, suie: result.recordset[0].suie });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
