@@ -322,7 +322,7 @@ router.post('/messages', async (req, res) => {
     await pool.request()
       .input('subject',  sql.NVarChar(500),    subject)
       .input('text',     sql.NVarChar(sql.MAX), text)
-      .input('suie',     sql.NVarChar(50),      suie)
+      .input('suie',     sql.NVarChar(50),      String(suie))
       .input('to_id',    sql.NVarChar(50),      String(to_id))
       .input('from_id',  sql.NVarChar(50),      String(suie))
       .query(`
