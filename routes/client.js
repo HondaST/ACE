@@ -376,8 +376,8 @@ router.post('/entities', async (req, res) => {
     if (!entity_type)                           return res.status(400).json({ error: 'Entity type is required' });
     if (isPersonal && (!first_name || !last_name)) return res.status(400).json({ error: 'First Name and Last Name are required' });
     if (!isPersonal && !entity_name)            return res.status(400).json({ error: 'Entity Name is required' });
-    if (!street || !city || !state || !zipcode || !cell || !email)
-      return res.status(400).json({ error: 'Street, City, State, Zipcode, Cell and Email are required' });
+    if (!street || !city || !state || !zipcode)
+      return res.status(400).json({ error: 'Street, City, State, and Zipcode are required' });
 
     // entityname stored in DB: "Last, First" for personal; entity_name for others
     const entityname = isPersonal
@@ -402,11 +402,11 @@ router.post('/entities', async (req, res) => {
       .query(`
         INSERT INTO people_entity
           (sui, entity_type, taxidnumber, first_name, last_name, entityname,
-           street, city, state, zipcode, cell, email, assigned_prep)
+           street, city, state, zipcode, cell, email, assigned_prep, created_date)
         OUTPUT INSERTED.suie
         VALUES
           (@sui, @entity_type, @taxidnumber, @first_name, @last_name, @entityname,
-           @street, @city, @state, @zipcode, @cell, @email, @assigned_prep)
+           @street, @city, @state, @zipcode, @cell, @email, @assigned_prep, GETDATE())
       `);
 
     res.json({ success: true, suie: result.recordset[0].suie });

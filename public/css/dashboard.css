@@ -379,6 +379,10 @@ tbody tr.selected:hover td { background: #1a5fa8; }
   text-align: right;
 }
 
+.ce-required {
+  color: #c00;
+}
+
 .ce-input-sm    { width: 90px; }
 .ce-input-date  { width: 180px; background: #f4f4f4 !important; }
 .ce-input-wide  { flex: 1; }

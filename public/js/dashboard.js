@@ -593,8 +593,6 @@ async function saveNewEntity() {
   if (!city)    { alert('City is required.');    return; }
   if (!state)   { alert('State is required.');   return; }
   if (!zipcode) { alert('Zipcode is required.'); return; }
-  if (!cell)    { alert('Cell is required.');    return; }
-  if (!email)   { alert('Email is required.');   return; }
 
   const result = await apiFetch(`${API}/entities`, {
     method: 'POST',
@@ -610,8 +608,8 @@ async function saveNewEntity() {
   });
 
   if (result && result.suie) {
-    document.getElementById('ce-entity-id').value = result.suie;
     loadEntities();   // refresh the entities list
+    closeCeModal();
   } else if (result && result.error) {
     alert(`Save failed: ${result.error}`);
   }
