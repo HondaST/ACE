@@ -53,6 +53,87 @@ router.get('/entities', async (req, res) => {
   }
 });
 
+// Single entity detail — for edit mode
+router.get('/entities/:suie', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('sui',  sql.Int,        req.user.sui)
+      .input('suie', sql.NVarChar(50), req.params.suie)
+      .query(`
+        SELECT p.suie, p.entity_type, p.taxidnumber,
+               p.first_name, p.last_name, p.entityname,
+               p.street, p.city, p.state, p.zipcode,
+               p.cell, p.email, p.assigned_prep, p.created_date
+        FROM   people_entity p
+        WHERE  p.sui = @sui AND p.suie = @suie
+      `);
+    if (!result.recordset.length) return res.status(404).json({ error: 'Entity not found' });
+    res.json(result.recordset[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update an existing tax entity
+router.put('/entities/:suie', async (req, res) => {
+  try {
+    const {
+      entity_type, taxidnumber,
+      first_name, last_name, entity_name,
+      street, city, state, zipcode,
+      cell, email, assigned_prep
+    } = req.body;
+
+    const isPersonal = entity_type === 'PERS';
+
+    if (!entity_type)                                return res.status(400).json({ error: 'Entity type is required' });
+    if (isPersonal && (!first_name || !last_name))   return res.status(400).json({ error: 'First Name and Last Name are required' });
+    if (!isPersonal && !entity_name)                 return res.status(400).json({ error: 'Entity Name is required' });
+    if (!street || !city || !state || !zipcode)
+      return res.status(400).json({ error: 'Street, City, State, and Zipcode are required' });
+
+    const entityname = isPersonal ? `${last_name}, ${first_name}` : entity_name;
+
+    const pool = await getPool();
+    await pool.request()
+      .input('sui',           sql.Int,           req.user.sui)
+      .input('suie',          sql.NVarChar(50),  req.params.suie)
+      .input('entity_type',   sql.NVarChar(50),  entity_type)
+      .input('taxidnumber',   sql.NVarChar(50),  taxidnumber  || null)
+      .input('first_name',    sql.NVarChar(100), first_name   || null)
+      .input('last_name',     sql.NVarChar(100), last_name    || null)
+      .input('entityname',    sql.NVarChar(200), entityname)
+      .input('street',        sql.NVarChar(200), street)
+      .input('city',          sql.NVarChar(100), city)
+      .input('state',         sql.NVarChar(2),   state.toUpperCase())
+      .input('zipcode',       sql.NVarChar(20),  zipcode)
+      .input('cell',          sql.NVarChar(50),  cell)
+      .input('email',         sql.NVarChar(200), email)
+      .input('assigned_prep', sql.NVarChar(50),  assigned_prep ? String(assigned_prep) : null)
+      .query(`
+        UPDATE people_entity
+        SET    entity_type   = @entity_type,
+               taxidnumber   = @taxidnumber,
+               first_name    = @first_name,
+               last_name     = @last_name,
+               entityname    = @entityname,
+               street        = @street,
+               city          = @city,
+               state         = @state,
+               zipcode       = @zipcode,
+               cell          = @cell,
+               email         = @email,
+               assigned_prep = @assigned_prep
+        WHERE  sui = @sui AND suie = @suie
+      `);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Section 4 — Distinct tax years for a given entity
 router.get('/entities/:suie/tax-years', async (req, res) => {
   try {
@@ -310,6 +391,91 @@ router.get('/invoices/:suie', async (req, res) => {
   }
 });
 
+// Full invoice detail for the edit screen
+router.get('/invoice-detail/:invoice_no', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('invoice_no', sql.Int, parseInt(req.params.invoice_no))
+      .query(`
+        SELECT i.invoice_no, i.tax_year, i.inv_desc,
+               i.inv_full_amount, i.inv_discount, i.inv_final_amount,
+               i.inv_date, i.emp_id, i.office_id, i.rt,
+               prep         = e.last_name + ', ' + e.first_name,
+               entityname   = CASE WHEN pe.entity_type = 'PERS'
+                                THEN pe.last_name + ', ' + pe.first_name
+                                ELSE pe.entityname END,
+               pe.street, pe.city, pe.state, pe.zipcode,
+               entity_cell  = pe.cell,
+               entity_email = pe.email,
+               client_name  = p.first_name + ' ' + p.last_name,
+               client_cell  = p.cell,
+               client_email = p.email
+        FROM   invoice i
+        LEFT JOIN people_entity pe ON i.suie = pe.suie
+        LEFT JOIN employee      e  ON i.emp_id = e.emp_id
+        LEFT JOIN people        p  ON pe.sui = p.sui
+        WHERE  i.invoice_no = @invoice_no
+      `);
+    if (!result.recordset.length) return res.status(404).json({ error: 'Invoice not found' });
+    res.json(result.recordset[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Offices for the ERO associated with an employee
+router.get('/offices-by-employee/:emp_id', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('emp_id', sql.NVarChar(50), req.params.emp_id)
+      .query(`
+        SELECT o.office_id, o.office_name
+        FROM   employee e
+        JOIN   office   o ON o.ero_id = e.ero_id
+        WHERE  e.emp_id = @emp_id
+        ORDER BY o.office_name
+      `);
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update an invoice
+router.put('/invoices/:invoice_no', async (req, res) => {
+  try {
+    const { tax_year, inv_desc, inv_full_amount, inv_discount, office_id, rt } = req.body;
+    const inv_final_amount = (Number(inv_full_amount) || 0) - (Number(inv_discount) || 0);
+
+    const pool = await getPool();
+    await pool.request()
+      .input('invoice_no',       sql.Int,          parseInt(req.params.invoice_no))
+      .input('tax_year',         sql.Int,           parseInt(tax_year))
+      .input('inv_desc',         sql.NVarChar(200), inv_desc || null)
+      .input('inv_full_amount',  sql.Decimal(10,2), Number(inv_full_amount) || 0)
+      .input('inv_discount',     sql.Decimal(10,2), Number(inv_discount)    || 0)
+      .input('inv_final_amount', sql.Decimal(10,2), inv_final_amount)
+      .input('office_id',        sql.NVarChar(50),  office_id || null)
+      .input('rt',               sql.NVarChar(3),   rt || 'No')
+      .query(`
+        UPDATE invoice
+        SET    tax_year         = @tax_year,
+               inv_desc         = @inv_desc,
+               inv_full_amount  = @inv_full_amount,
+               inv_discount     = @inv_discount,
+               inv_final_amount = @inv_final_amount,
+               office_id        = @office_id,
+               rt               = @rt
+        WHERE  invoice_no = @invoice_no
+      `);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Section 7 — Send a message
 router.post('/messages', async (req, res) => {
   try {
@@ -355,6 +521,34 @@ router.get('/preparers', async (req, res) => {
     const result = await pool.request()
       .query(`SELECT emp_id, first_name, last_name FROM employee ORDER BY last_name, first_name`);
     res.json(result.recordset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Check whether a tax ID number is already in use
+// PERS entity_type checks only against other PERS entities
+// All other types check against all non-PERS entities
+router.get('/check-taxid', async (req, res) => {
+  try {
+    const { taxidnumber, entity_type, exclude_suie } = req.query;
+    if (!taxidnumber || !taxidnumber.trim()) return res.json({ inUse: false });
+
+    const isPersonal = entity_type === 'PERS';
+    const pool = await getPool();
+    const dbRequest = pool.request()
+      .input('taxidnumber', sql.NVarChar(50), taxidnumber.trim());
+
+    let query = `SELECT COUNT(*) AS cnt FROM people_entity WHERE taxidnumber = @taxidnumber`;
+    query += isPersonal ? ` AND entity_type = 'PERS'` : ` AND entity_type != 'PERS'`;
+
+    if (exclude_suie) {
+      dbRequest.input('exclude_suie', sql.NVarChar(50), exclude_suie);
+      query += ` AND suie != @exclude_suie`;
+    }
+
+    const result = await dbRequest.query(query);
+    res.json({ inUse: result.recordset[0].cnt > 0 });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

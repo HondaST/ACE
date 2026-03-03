@@ -383,6 +383,12 @@ tbody tr.selected:hover td { background: #1a5fa8; }
   color: #c00;
 }
 
+.ce-taxid-error {
+  font-size: 11px;
+  color: #c00;
+  white-space: nowrap;
+}
+
 .ce-input-sm    { width: 90px; }
 .ce-input-date  { width: 180px; background: #f4f4f4 !important; }
 .ce-input-wide  { flex: 1; }
@@ -483,6 +489,114 @@ tbody tr.selected:hover td { background: #1a5fa8; }
 #invoices-table th.num,
 #invoices-table td.num {
   text-align: right;
+}
+
+/* ── Invoice Edit modal ──────────────────────────────────── */
+.invoice-edit-modal {
+  width: 600px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.inv-tabs {
+  display: flex;
+  border-bottom: 2px solid #1a5fa8;
+  background: #eef1f7;
+  padding: 6px 12px 0;
+  gap: 2px;
+}
+
+.inv-tab {
+  padding: 4px 18px;
+  font-size: 12px;
+  font-weight: bold;
+  border: 1px solid #bbb;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  background: #dde2ea;
+  color: #444;
+  cursor: pointer;
+}
+
+.inv-tab-active {
+  background: #fff;
+  color: #1a3a5c;
+  border-color: #1a5fa8;
+  position: relative;
+  bottom: -2px;
+  z-index: 1;
+}
+
+.inv-panel {
+  padding: 10px 14px 6px;
+}
+
+.inv-section-label {
+  font-size: 11px;
+  font-weight: bold;
+  color: #1a3a5c;
+  margin: 6px 0 3px;
+}
+
+.inv-info-box {
+  border: 1px solid #bbb;
+  border-radius: 3px;
+  background: #f9f9f9;
+  margin-bottom: 8px;
+}
+
+.inv-info-row {
+  font-size: 12px;
+  padding: 2px 10px;
+  text-align: center;
+  color: #222;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.inv-info-row:last-child { border-bottom: none; }
+
+.inv-fields { margin-top: 6px; }
+
+.inv-field-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.inv-label {
+  font-size: 12px;
+  color: #333;
+  min-width: 88px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.inv-label-gap { min-width: auto; margin-left: 10px; }
+
+.inv-input-sm    { width: 80px;  font-size: 12px; border: 1px solid #bbb; border-radius: 2px; padding: 2px 4px; }
+.inv-input-wide  { flex: 1;      font-size: 12px; border: 1px solid #bbb; border-radius: 2px; padding: 2px 4px; }
+.inv-input-num   { width: 80px;  font-size: 12px; border: 1px solid #bbb; border-radius: 2px; padding: 2px 4px; text-align: right; }
+.inv-select-med  { width: 180px; font-size: 12px; border: 1px solid #bbb; border-radius: 2px; padding: 2px 4px; }
+.inv-select-xs   { width: 60px;  font-size: 12px; border: 1px solid #bbb; border-radius: 2px; padding: 2px 4px; }
+
+input[readonly].inv-input-sm,
+input[readonly].inv-input-wide,
+input[readonly].inv-input-num { background: #f4f4f4; }
+
+.inv-footer {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px 0 10px;
+  border-top: 1px solid #ddd;
+}
+
+.inv-payments-placeholder {
+  padding: 30px;
+  text-align: center;
+  font-size: 12px;
+  color: #888;
 }
 
 /* ═══════════════════════════════════════

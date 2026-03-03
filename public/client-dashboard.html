@@ -199,7 +199,7 @@
   <div id="create-entity-overlay" class="modal-overlay hidden">
     <div class="modal-box create-entity-modal">
       <div class="modal-titlebar">
-        <span>Create Tax Entity</span>
+        <span id="ce-modal-title">Create Tax Entity</span>
         <button class="modal-close-btn" id="ce-close-x">&#x2715;</button>
       </div>
       <div class="ce-body">
@@ -220,6 +220,7 @@
         <div class="ce-form-row">
           <label class="ce-label ce-label-right">Tax ID Number:</label>
           <input type="text" id="ce-taxid" class="ce-input-sm">
+          <span id="ce-taxid-error" class="ce-taxid-error hidden">&#9888; Already in use</span>
         </div>
 
         <!-- Personal section: shown only for PERS -->
@@ -306,7 +307,7 @@
   <!-- File type selection modal -->
   <div id="filetype-overlay" class="modal-overlay hidden">
     <div class="modal-box">
-      <div class="modal-title">Select File Type</div>
+      <div class="modal-title">Select File Type &amp; Tax Year</div>
       <div class="modal-filename" id="modal-filename"></div>
       <div class="modal-row">
         <label for="filetype-select">File Type:</label>
@@ -314,9 +315,104 @@
           <option value="">— choose —</option>
         </select>
       </div>
+      <div class="modal-row">
+        <label for="taxyear-input">Tax Year:</label>
+        <input type="text" id="taxyear-input" maxlength="4" placeholder="e.g. 2024" style="width:80px;">
+      </div>
       <div class="modal-buttons">
         <button class="action-btn" id="modal-upload-btn">Upload</button>
         <button class="action-btn" id="modal-cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Invoice Edit modal -->
+  <div id="invoice-edit-overlay" class="modal-overlay hidden">
+    <div class="modal-box invoice-edit-modal">
+      <div class="modal-titlebar">
+        <span id="inv-modal-title">Invoice Number</span>
+        <button class="modal-close-btn" id="inv-close-x">&#x2715;</button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="inv-tabs">
+        <button class="inv-tab inv-tab-active" id="inv-tab-invoice">Invoice</button>
+        <button class="inv-tab" id="inv-tab-payments">Payments</button>
+      </div>
+
+      <!-- Invoice panel -->
+      <div id="inv-invoice-panel" class="inv-panel">
+
+        <!-- Client Contact -->
+        <div class="inv-section-label">Client Contact</div>
+        <div class="inv-info-box">
+          <div class="inv-info-row" id="inv-client-name"></div>
+          <div class="inv-info-row" id="inv-client-contact"></div>
+        </div>
+
+        <!-- Tax Entity Information -->
+        <div class="inv-section-label">Tax Entity Information</div>
+        <div class="inv-info-box">
+          <div class="inv-info-row" id="inv-entity-name"></div>
+          <div class="inv-info-row" id="inv-entity-street"></div>
+          <div class="inv-info-row" id="inv-entity-csz"></div>
+          <div class="inv-info-row" id="inv-entity-contact"></div>
+        </div>
+
+        <!-- Editable fields -->
+        <div class="inv-fields">
+          <div class="inv-field-row">
+            <label class="inv-label">Invoice No:</label>
+            <input type="text" id="inv-invoice-no" class="inv-input-sm" readonly>
+            <label class="inv-label inv-label-gap">Date:</label>
+            <input type="text" id="inv-date" class="inv-input-sm" readonly>
+          </div>
+          <div class="inv-field-row">
+            <label class="inv-label">Preparer:</label>
+            <input type="text" id="inv-preparer" class="inv-input-wide" readonly>
+          </div>
+          <div class="inv-field-row">
+            <label class="inv-label">Office:</label>
+            <select id="inv-office" class="inv-select-med"></select>
+            <label class="inv-label inv-label-gap">RT:</label>
+            <select id="inv-rt" class="inv-select-xs">
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
+            </select>
+          </div>
+          <div class="inv-field-row">
+            <label class="inv-label">Tax Year:</label>
+            <input type="text" id="inv-tax-year" class="inv-input-sm" maxlength="4">
+          </div>
+          <div class="inv-field-row">
+            <label class="inv-label">Inv Desc:</label>
+            <input type="text" id="inv-desc" class="inv-input-wide">
+          </div>
+          <div class="inv-field-row">
+            <label class="inv-label">From Value:</label>
+            <input type="number" id="inv-full-amount" class="inv-input-num" step="0.01" min="0">
+          </div>
+          <div class="inv-field-row">
+            <label class="inv-label">Discount:</label>
+            <input type="number" id="inv-discount" class="inv-input-num" step="0.01" min="0">
+          </div>
+          <div class="inv-field-row">
+            <label class="inv-label">Final Amount:</label>
+            <input type="number" id="inv-final-amount" class="inv-input-num" readonly>
+          </div>
+        </div>
+
+      </div><!-- /inv-invoice-panel -->
+
+      <!-- Payments panel -->
+      <div id="inv-payments-panel" class="inv-panel hidden">
+        <div class="inv-payments-placeholder">Payment details coming soon.</div>
+      </div>
+
+      <div class="inv-footer">
+        <button class="action-btn" id="inv-print-btn">Print</button>
+        <button class="action-btn" id="inv-save-btn">Save</button>
+        <button class="action-btn" id="inv-close-btn">Close</button>
       </div>
     </div>
   </div>

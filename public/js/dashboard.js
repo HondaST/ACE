@@ -11,6 +11,7 @@ let currentSuie   = null;   // selected tax entity unique id
 let currentPrepId = null;   // assigned_prep emp_id for sending messages
 let currentYear   = null;   // selected tax year
 let pendingFile   = null;   // file awaiting type selection
+let editingSuie   = null;   // suie being edited (null = create mode)
 
 /* ── Demo / mock data (activated via ?demo in URL) ───────── */
 const DEMO_DATA = {
@@ -124,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bindCompose();
   bindUpload();
   bindNewEntity();
+  bindInvoiceEdit();
 });
 
 /* ================================================================
@@ -164,6 +166,7 @@ async function loadEntities() {
       <td>${esc(entity.email)}</td>
     `;
     tr.addEventListener('click', () => selectEntity(tr, entity));
+    tr.addEventListener('dblclick', () => startEditEntity(entity));
     tbody.appendChild(tr);
 
     // Auto-select first row
@@ -187,13 +190,14 @@ function selectEntity(row, entity) {
 /* ================================================================
    SECTION 4 — Tax Years
 ================================================================ */
-async function loadTaxYears(suie) {
+async function loadTaxYears(suie, targetYear = null) {
   const years = DEMO ? DEMO_DATA.taxYears : await apiFetch(`${API}/entities/${suie}/tax-years`);
   if (!years) return;
 
   const container = document.getElementById('tax-years');
   container.innerHTML = '';
 
+  let matched = false;
   years.forEach((row, idx) => {
     const div = document.createElement('div');
     div.className = 'year-item';
@@ -201,9 +205,19 @@ async function loadTaxYears(suie) {
     div.addEventListener('click', () => selectYear(div, row.tax_year));
     container.appendChild(div);
 
-    // Auto-select first year
-    if (idx === 0) div.click();
+    // Select targetYear if provided, otherwise auto-select first
+    if (targetYear !== null && String(row.tax_year) === String(targetYear)) {
+      div.click();
+      matched = true;
+    } else if (!targetYear && idx === 0) {
+      div.click();
+    }
   });
+
+  // If targetYear wasn't in the list yet, fall back to first
+  if (targetYear && !matched && years.length) {
+    container.querySelector('.year-item').click();
+  }
 }
 
 function selectYear(el, year) {
@@ -316,7 +330,8 @@ async function loadInvoices(suie) {
       <td>${esc(inv.client_email)}</td>
       <td>${esc(inv.client_cell)}</td>
     `;
-    tr.addEventListener('click', () => selectInvoice(tr, inv));
+    tr.addEventListener('click',  () => selectInvoice(tr, inv));
+    tr.addEventListener('dblclick', () => openInvoiceEdit(inv));
     tbody.appendChild(tr);
 
     totalDiscount += Number(inv.inv_discount)    || 0;
@@ -497,10 +512,32 @@ function bindNewEntity() {
   document.getElementById('ce-close-btn').addEventListener('click', closeCeModal);
   document.getElementById('ce-save-btn').addEventListener('click',  saveNewEntity);
   document.getElementById('ce-print-btn').addEventListener('click', () => window.print());
+
+  // Tax ID blur — check uniqueness as soon as the user leaves the field
+  document.getElementById('ce-taxid').addEventListener('blur', async () => {
+    const taxid      = document.getElementById('ce-taxid').value.trim();
+    const entityType = document.getElementById('ce-entity-type').value;
+    const errEl      = document.getElementById('ce-taxid-error');
+    if (!taxid || !entityType) { errEl.classList.add('hidden'); return; }
+    const result = await checkTaxIdInUse(taxid, entityType, editingSuie);
+    errEl.classList.toggle('hidden', !result);
+  });
 }
 
 function closeCeModal() {
   document.getElementById('create-entity-overlay').classList.add('hidden');
+  editingSuie = null;
+  document.getElementById('ce-modal-title').textContent = 'Create Tax Entity';
+  document.getElementById('ce-taxid-error').classList.add('hidden');
+}
+
+// Returns true if the given tax ID is already in use by another entity of the same category
+async function checkTaxIdInUse(taxid, entityType, excludeSuie = null) {
+  if (DEMO) return false;
+  let url = `${API}/check-taxid?taxidnumber=${encodeURIComponent(taxid)}&entity_type=${encodeURIComponent(entityType)}`;
+  if (excludeSuie) url += `&exclude_suie=${encodeURIComponent(excludeSuie)}`;
+  const result = await apiFetch(url);
+  return result ? result.inUse : false;
 }
 
 // Opens the Create Entity form pre-set to the chosen entityType (et_id)
@@ -514,10 +551,11 @@ async function startNewEntity(etId) {
     `${now.getMonth()+1}/${now.getDate()}/${now.getFullYear()} ` +
     `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
-  // Clear all editable fields
+  // Clear all editable fields and error states
   ['ce-entity-id','ce-taxid','ce-first-name','ce-last-name','ce-entity-name',
    'ce-street','ce-city','ce-state','ce-zipcode','ce-cell','ce-email'
   ].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('ce-taxid-error').classList.add('hidden');
 
   // Toggle personal vs non-personal name section
   document.getElementById('ce-personal-section').classList.toggle('hidden', !isPersonal);
@@ -528,6 +566,49 @@ async function startNewEntity(etId) {
 
   // Populate Assigned Prep dropdown
   await loadPreparersForForm();
+
+  document.getElementById('create-entity-overlay').classList.remove('hidden');
+}
+
+// Opens the Create Entity form populated with existing entity data (edit mode)
+async function startEditEntity(listEntity) {
+  const entity = DEMO
+    ? listEntity
+    : await apiFetch(`${API}/entities/${listEntity.suie}`);
+  if (!entity) return;
+
+  editingSuie = listEntity.suie;
+  document.getElementById('ce-modal-title').textContent = 'Edit Tax Entity';
+  document.getElementById('ce-taxid-error').classList.add('hidden');
+
+  const isPersonal = (entity.entity_type || entity.tax_type) === 'PERS';
+
+  document.getElementById('ce-entity-id').value    = entity.suie || '';
+  document.getElementById('ce-taxid').value        = entity.taxidnumber || '';
+  document.getElementById('ce-first-name').value   = entity.first_name  || '';
+  document.getElementById('ce-last-name').value    = entity.last_name   || '';
+  document.getElementById('ce-entity-name').value  = entity.entityname  || '';
+  document.getElementById('ce-street').value       = entity.street      || '';
+  document.getElementById('ce-city').value         = entity.city        || '';
+  document.getElementById('ce-state').value        = entity.state       || '';
+  document.getElementById('ce-zipcode').value      = entity.zipcode     || '';
+  document.getElementById('ce-cell').value         = entity.cell        || '';
+  document.getElementById('ce-email').value        = entity.email       || '';
+
+  // Format created date
+  if (entity.created_date) {
+    const d = new Date(entity.created_date);
+    const pad = n => String(n).padStart(2, '0');
+    document.getElementById('ce-created-date').value =
+      `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()} ` +
+      `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+
+  document.getElementById('ce-personal-section').classList.toggle('hidden', !isPersonal);
+  document.getElementById('ce-nonpersonal-section').classList.toggle('hidden', isPersonal);
+
+  await loadEntityTypesForForm(entity.entity_type);
+  await loadPreparersForForm(entity.assigned_prep);
 
   document.getElementById('create-entity-overlay').classList.remove('hidden');
 }
@@ -553,7 +634,7 @@ async function loadEntityTypesForForm(selectedEtId) {
   }
 }
 
-async function loadPreparersForForm() {
+async function loadPreparersForForm(selectedEmpId = null) {
   const sel = document.getElementById('ce-assigned-prep');
   sel.innerHTML = '<option value="">— optional —</option>';
   const preps = await apiFetch(`${API}/preparers`);
@@ -562,6 +643,7 @@ async function loadPreparersForForm() {
       const opt = document.createElement('option');
       opt.value       = p.emp_id;
       opt.textContent = `${p.last_name}, ${p.first_name}`;
+      if (String(p.emp_id) === String(selectedEmpId)) opt.selected = true;
       sel.appendChild(opt);
     });
   }
@@ -582,6 +664,16 @@ async function saveNewEntity() {
   const taxid        = document.getElementById('ce-taxid').value.trim();
   const assignedPrep = document.getElementById('ce-assigned-prep').value;
 
+  // If a tax ID was entered, confirm it is not already in use before saving
+  if (taxid) {
+    const inUse = await checkTaxIdInUse(taxid, entityType, editingSuie);
+    if (inUse) {
+      document.getElementById('ce-taxid-error').classList.remove('hidden');
+      document.getElementById('ce-taxid').focus();
+      return;
+    }
+  }
+
   // Validate required fields (taxid and assigned_prep are optional)
   if (isPersonal) {
     if (!firstName) { alert('First Name is required.'); return; }
@@ -594,24 +686,38 @@ async function saveNewEntity() {
   if (!state)   { alert('State is required.');   return; }
   if (!zipcode) { alert('Zipcode is required.'); return; }
 
-  const result = await apiFetch(`${API}/entities`, {
-    method: 'POST',
-    body: JSON.stringify({
-      entity_type:  entityType,
-      taxidnumber:  taxid      || null,
-      first_name:   firstName,
-      last_name:    lastName,
-      entity_name:  entityName,
-      street, city, state, zipcode, cell, email,
-      assigned_prep: assignedPrep || null
-    })
-  });
+  const payload = {
+    entity_type:  entityType,
+    taxidnumber:  taxid      || null,
+    first_name:   firstName,
+    last_name:    lastName,
+    entity_name:  entityName,
+    street, city, state, zipcode, cell, email,
+    assigned_prep: assignedPrep || null
+  };
 
-  if (result && result.suie) {
-    loadEntities();   // refresh the entities list
-    closeCeModal();
-  } else if (result && result.error) {
-    alert(`Save failed: ${result.error}`);
+  if (editingSuie) {
+    const result = await apiFetch(`${API}/entities/${editingSuie}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+    if (result && result.success) {
+      loadEntities();
+      closeCeModal();
+    } else if (result && result.error) {
+      alert(`Save failed: ${result.error}`);
+    }
+  } else {
+    const result = await apiFetch(`${API}/entities`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    if (result && result.suie) {
+      loadEntities();
+      closeCeModal();
+    } else if (result && result.error) {
+      alert(`Save failed: ${result.error}`);
+    }
   }
 }
 
@@ -655,11 +761,12 @@ function bindUpload() {
 
   // Modal buttons
   document.getElementById('modal-upload-btn').addEventListener('click', () => {
-    const sel        = document.getElementById('filetype-select');
-    const fileTypeId = sel.value;           // capture BEFORE hideFileTypeModal clears it
+    const fileTypeId = document.getElementById('filetype-select').value;
+    const taxYear    = document.getElementById('taxyear-input').value.trim();
     if (!fileTypeId) { alert('Please select a file type.'); return; }
+    if (!taxYear || !/^\d{4}$/.test(taxYear)) { alert('Please enter a valid 4-digit tax year.'); return; }
     hideFileTypeModal();
-    uploadFile(pendingFile, fileTypeId);
+    uploadFile(pendingFile, fileTypeId, taxYear);
   });
 
   document.getElementById('modal-cancel-btn').addEventListener('click', () => {
@@ -675,7 +782,7 @@ async function showFileTypeModal(file) {
   document.getElementById('modal-filename').textContent = `File: ${file.name}`;
 
   // Load file types and populate dropdown
-  const sel   = document.getElementById('filetype-select');
+  const sel = document.getElementById('filetype-select');
   sel.innerHTML = '<option value="">— choose —</option>';
 
   const types = await apiFetch(`${API}/file-types`);
@@ -688,15 +795,20 @@ async function showFileTypeModal(file) {
     });
   }
 
+  // Pre-fill tax year from current selection, fall back to current calendar year
+  document.getElementById('taxyear-input').value =
+    currentYear || new Date().getFullYear();
+
   document.getElementById('filetype-overlay').classList.remove('hidden');
 }
 
 function hideFileTypeModal() {
   document.getElementById('filetype-overlay').classList.add('hidden');
   document.getElementById('filetype-select').value = '';
+  document.getElementById('taxyear-input').value   = '';
 }
 
-async function uploadFile(file, fileTypeId) {
+async function uploadFile(file, fileTypeId, taxYear) {
   const token = getToken();
 
   // Read file as raw bytes — avoids all multipart parsing complexity
@@ -706,7 +818,7 @@ async function uploadFile(file, fileTypeId) {
   let url = `${API}/upload/${encodeURIComponent(currentSuie)}`
           + `?file_type_id=${encodeURIComponent(fileTypeId)}`
           + `&filename=${encodeURIComponent(file.name)}`;
-  if (currentYear) url += `&tax_year=${encodeURIComponent(currentYear)}`;
+  if (taxYear) url += `&tax_year=${encodeURIComponent(taxYear)}`;
 
   try {
     const res = await fetch(url, {
@@ -724,9 +836,140 @@ async function uploadFile(file, fileTypeId) {
       return;
     }
 
-    // Refresh the files list to show the newly uploaded file
-    loadFiles(currentSuie, currentYear);
+    // Reload tax years and highlight the year used for this upload
+    loadTaxYears(currentSuie, taxYear);
   } catch (e) {
     alert(`Upload failed: ${e.message}`);
+  }
+}
+
+/* ================================================================
+   Invoice Edit modal
+================================================================ */
+function bindInvoiceEdit() {
+  document.getElementById('inv-close-x').addEventListener('click',   closeInvoiceEdit);
+  document.getElementById('inv-close-btn').addEventListener('click', closeInvoiceEdit);
+  document.getElementById('inv-save-btn').addEventListener('click',  saveInvoiceEdit);
+  document.getElementById('inv-print-btn').addEventListener('click', () => window.print());
+
+  // Tab switching
+  document.getElementById('inv-tab-invoice').addEventListener('click', () => {
+    document.getElementById('inv-tab-invoice').classList.add('inv-tab-active');
+    document.getElementById('inv-tab-payments').classList.remove('inv-tab-active');
+    document.getElementById('inv-invoice-panel').classList.remove('hidden');
+    document.getElementById('inv-payments-panel').classList.add('hidden');
+  });
+  document.getElementById('inv-tab-payments').addEventListener('click', () => {
+    document.getElementById('inv-tab-payments').classList.add('inv-tab-active');
+    document.getElementById('inv-tab-invoice').classList.remove('inv-tab-active');
+    document.getElementById('inv-payments-panel').classList.remove('hidden');
+    document.getElementById('inv-invoice-panel').classList.add('hidden');
+  });
+
+  // Auto-calculate Final Amount when From Value or Discount changes
+  ['inv-full-amount', 'inv-discount'].forEach(id => {
+    document.getElementById(id).addEventListener('input', recalcFinalAmount);
+  });
+}
+
+function recalcFinalAmount() {
+  const full     = parseFloat(document.getElementById('inv-full-amount').value)  || 0;
+  const discount = parseFloat(document.getElementById('inv-discount').value)     || 0;
+  document.getElementById('inv-final-amount').value = (full - discount).toFixed(2);
+}
+
+async function openInvoiceEdit(listInv) {
+  const inv = DEMO
+    ? listInv
+    : await apiFetch(`${API}/invoice-detail/${listInv.invoice_no}`);
+  if (!inv) return;
+
+  // Title
+  document.getElementById('inv-modal-title').textContent = `Invoice Number ${inv.invoice_no}`;
+
+  // Client Contact section
+  document.getElementById('inv-client-name').textContent    = inv.client_name || '';
+  document.getElementById('inv-client-contact').textContent =
+    `Cell: ${inv.client_cell || ''}   Email: ${inv.client_email || ''}`;
+
+  // Tax Entity Information section
+  document.getElementById('inv-entity-name').textContent    = inv.entityname || '';
+  document.getElementById('inv-entity-street').textContent  = inv.street     || '';
+  document.getElementById('inv-entity-csz').textContent     =
+    `${inv.city || ''}, ${inv.state || ''}  ${inv.zipcode || ''}`.trim();
+  document.getElementById('inv-entity-contact').textContent =
+    `Cell: ${inv.entity_cell || ''}   Email: ${inv.entity_email || ''}`;
+
+  // Readonly fields
+  document.getElementById('inv-invoice-no').value = inv.invoice_no || '';
+  document.getElementById('inv-date').value        = inv.inv_date ? fmtInvDate(inv.inv_date) : '';
+  document.getElementById('inv-preparer').value    = inv.prep || '';
+
+  // Editable fields
+  document.getElementById('inv-tax-year').value    = inv.tax_year    || '';
+  document.getElementById('inv-desc').value        = inv.inv_desc    || '';
+  document.getElementById('inv-full-amount').value = inv.inv_full_amount != null ? Number(inv.inv_full_amount).toFixed(2) : '';
+  document.getElementById('inv-discount').value    = inv.inv_discount    != null ? Number(inv.inv_discount).toFixed(2)    : '';
+  document.getElementById('inv-final-amount').value = inv.inv_final_amount != null ? Number(inv.inv_final_amount).toFixed(2) : '';
+
+  // RT dropdown
+  const rtSel = document.getElementById('inv-rt');
+  rtSel.value = inv.rt || 'No';
+
+  // Office dropdown — load offices for this employee's ERO
+  const officeSel = document.getElementById('inv-office');
+  officeSel.innerHTML = '<option value="">— select —</option>';
+  const offices = await apiFetch(`${API}/offices-by-employee/${encodeURIComponent(inv.emp_id)}`);
+  if (offices && offices.length) {
+    offices.forEach(o => {
+      const opt = document.createElement('option');
+      opt.value       = o.office_id;
+      opt.textContent = `${o.office_id}-${o.office_name}`;
+      if (o.office_id === inv.office_id) opt.selected = true;
+      officeSel.appendChild(opt);
+    });
+  }
+
+  // Reset to Invoice tab
+  document.getElementById('inv-tab-invoice').classList.add('inv-tab-active');
+  document.getElementById('inv-tab-payments').classList.remove('inv-tab-active');
+  document.getElementById('inv-invoice-panel').classList.remove('hidden');
+  document.getElementById('inv-payments-panel').classList.add('hidden');
+
+  document.getElementById('invoice-edit-overlay').classList.remove('hidden');
+}
+
+function closeInvoiceEdit() {
+  document.getElementById('invoice-edit-overlay').classList.add('hidden');
+}
+
+async function saveInvoiceEdit() {
+  if (DEMO) { closeInvoiceEdit(); return; }
+  const invoiceNo = document.getElementById('inv-invoice-no').value;
+  const taxYear   = document.getElementById('inv-tax-year').value.trim();
+
+  if (!taxYear || !/^\d{4}$/.test(taxYear)) {
+    alert('Please enter a valid 4-digit tax year.');
+    document.getElementById('inv-tax-year').focus();
+    return;
+  }
+
+  const result = await apiFetch(`${API}/invoices/${invoiceNo}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      tax_year:        taxYear,
+      inv_desc:        document.getElementById('inv-desc').value.trim(),
+      inv_full_amount: document.getElementById('inv-full-amount').value,
+      inv_discount:    document.getElementById('inv-discount').value,
+      office_id:       document.getElementById('inv-office').value,
+      rt:              document.getElementById('inv-rt').value
+    })
+  });
+
+  if (result && result.success) {
+    closeInvoiceEdit();
+    loadInvoices(currentSuie);   // refresh the invoices list
+  } else if (result && result.error) {
+    alert(`Save failed: ${result.error}`);
   }
 }
