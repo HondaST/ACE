@@ -398,24 +398,35 @@ router.get('/invoice-detail/:invoice_no', async (req, res) => {
     const result = await pool.request()
       .input('invoice_no', sql.Int, parseInt(req.params.invoice_no))
       .query(`
-        SELECT i.invoice_no, i.tax_year, i.inv_desc,
-               i.inv_full_amount, i.inv_discount, i.inv_final_amount,
-               i.inv_date, i.emp_id, i.office_id, i.rt,
-               prep         = e.last_name + ', ' + e.first_name,
-               entityname   = CASE WHEN pe.entity_type = 'PERS'
-                                THEN pe.last_name + ', ' + pe.first_name
-                                ELSE pe.entityname END,
-               pe.street, pe.city, pe.state, pe.zipcode,
-               entity_cell  = pe.cell,
-               entity_email = pe.email,
-               client_name  = p.first_name + ' ' + p.last_name,
-               client_cell  = p.cell,
-               client_email = p.email
-        FROM   invoice i
-        LEFT JOIN people_entity pe ON i.suie = pe.suie
-        LEFT JOIN employee      e  ON i.emp_id = e.emp_id
-        LEFT JOIN people        p  ON pe.sui = p.sui
-        WHERE  i.invoice_no = @invoice_no
+        SELECT   i.invoice_no,
+                 i.suie,
+                 pe.sui,
+                 i.emp_id,
+                 i.tax_year,
+                 i.inv_desc,
+                 i.inv_full_amount,
+                 i.inv_discount,
+                 i.inv_final_amount,
+                 i.inv_date,
+                 i.void_ind,
+                 entityname = case pe.entity_type when 'PERS' then pe.first_name + ' ' + pe.last_name else pe.entityname end,
+                 prep = e.last_name + ', ' + e.first_name,
+                 pe.street,
+                 pe.city,
+                 pe.state,
+                 pe.zipcode,
+                 p.first_name,
+                 p.last_name,
+                 p.cell,
+                 p.email,
+                 entity_cell = isnull(pe.cell,''),
+                 entity_email = isnull(pe.email,''),
+                 i.office_id,
+                 i.rt_ind
+        FROM invoice i join employee e on i.emp_id = e.emp_id
+             join people_entity pe on i.suie = pe.suie
+             join people p on pe.sui = p.sui
+        WHERE i.invoice_no = @invoice_no
       `);
     if (!result.recordset.length) return res.status(404).json({ error: 'Invoice not found' });
     res.json(result.recordset[0]);
@@ -431,11 +442,11 @@ router.get('/offices-by-employee/:emp_id', async (req, res) => {
     const result = await pool.request()
       .input('emp_id', sql.NVarChar(50), req.params.emp_id)
       .query(`
-        SELECT o.office_id, o.office_name
+        SELECT o.office_id, o.office_desc
         FROM   employee e
-        JOIN   office   o ON o.ero_id = e.ero_id
+        JOIN   offices  o ON o.ero_id = e.ero_id
         WHERE  e.emp_id = @emp_id
-        ORDER BY o.office_name
+        ORDER BY o.office_desc
       `);
     res.json(result.recordset);
   } catch (err) {

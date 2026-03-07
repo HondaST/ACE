@@ -57,6 +57,12 @@ async function apiFetch(url, opts = {}) {
   });
 
   if (res.status === 401) { redirectLogin(); return null; }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.error('API error', res.status, err);
+    alert(`Error: ${err.error || res.statusText}`);
+    return null;
+  }
 
   return res.json();
 }
@@ -888,9 +894,9 @@ async function openInvoiceEdit(listInv) {
   document.getElementById('inv-modal-title').textContent = `Invoice Number ${inv.invoice_no}`;
 
   // Client Contact section
-  document.getElementById('inv-client-name').textContent    = inv.client_name || '';
+  document.getElementById('inv-client-name').textContent    = `${inv.first_name || ''} ${inv.last_name || ''}`.trim();
   document.getElementById('inv-client-contact').textContent =
-    `Cell: ${inv.client_cell || ''}   Email: ${inv.client_email || ''}`;
+    `Cell: ${inv.cell || ''}   Email: ${inv.email || ''}`;
 
   // Tax Entity Information section
   document.getElementById('inv-entity-name').textContent    = inv.entityname || '';
@@ -914,7 +920,7 @@ async function openInvoiceEdit(listInv) {
 
   // RT dropdown
   const rtSel = document.getElementById('inv-rt');
-  rtSel.value = inv.rt || 'No';
+  rtSel.value = inv.rt_ind || 'No';
 
   // Office dropdown — load offices for this employee's ERO
   const officeSel = document.getElementById('inv-office');
@@ -924,7 +930,7 @@ async function openInvoiceEdit(listInv) {
     offices.forEach(o => {
       const opt = document.createElement('option');
       opt.value       = o.office_id;
-      opt.textContent = `${o.office_id}-${o.office_name}`;
+      opt.textContent = `${o.office_id}-${o.office_desc}`;
       if (o.office_id === inv.office_id) opt.selected = true;
       officeSel.appendChild(opt);
     });
