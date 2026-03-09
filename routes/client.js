@@ -620,4 +620,73 @@ router.post('/entities', async (req, res) => {
   }
 });
 
+// Payment types lookup
+router.get('/payment-types', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .query(`SELECT payment_type_id, payment_type_desc FROM payment_type ORDER BY payment_type_desc`);
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Payments for an invoice
+router.get('/payments/:invoice_no', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const invoiceNo = parseInt(req.params.invoice_no);
+    console.log(`[payments GET] invoice_no=${invoiceNo}`);
+    const result = await pool.request()
+      .input('invoice_no', sql.Int, invoiceNo)
+      .query(`
+        SELECT p.sequence_no                        AS pmt_no,
+               p.payment_amount,
+               ISNULL(pt.payment_type_desc, p.payment_type_id) AS payment_type_id,
+               p.payment_date
+        FROM   payment      p
+        LEFT JOIN payment_type pt ON pt.payment_type_id = p.payment_type_id
+        WHERE  p.invoice_no = @invoice_no
+        ORDER BY p.sequence_no ASC
+      `);
+    console.log(`[payments GET] returned ${result.recordset.length} rows`);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('[payments GET] ERROR:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Record a payment
+router.post('/payments', async (req, res) => {
+  try {
+    const { invoice_no, payment_amount, payment_type } = req.body;
+    console.log(`[payments POST] invoice_no=${invoice_no}, amount=${payment_amount}, type=${payment_type}`);
+    if (!invoice_no || !payment_amount || !payment_type)
+      return res.status(400).json({ error: 'invoice_no, payment_amount, and payment_type are required' });
+
+    const pool = await getPool();
+    await pool.request()
+      .input('invoice_no',      sql.Int,          parseInt(invoice_no))
+      .input('payment_amount',  sql.Decimal(10,2), Number(payment_amount))
+      .input('payment_type_id', sql.NVarChar(50),  String(payment_type))
+      .query(`
+        INSERT INTO payment (invoice_no, sequence_no, payment_amount, payment_type_id, payment_date)
+        VALUES (
+          @invoice_no,
+          (SELECT ISNULL(MAX(sequence_no), 0) + 1 FROM payment WHERE invoice_no = @invoice_no),
+          @payment_amount,
+          @payment_type_id,
+          GETDATE()
+        )
+      `);
+    console.log(`[payments POST] INSERT succeeded`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[payments POST] ERROR:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

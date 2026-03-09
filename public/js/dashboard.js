@@ -7,11 +7,14 @@ const API = '/api/client';
 const DEMO = new URLSearchParams(location.search).has('demo');
 
 // State
-let currentSuie   = null;   // selected tax entity unique id
-let currentPrepId = null;   // assigned_prep emp_id for sending messages
-let currentYear   = null;   // selected tax year
-let pendingFile   = null;   // file awaiting type selection
-let editingSuie   = null;   // suie being edited (null = create mode)
+let currentSuie           = null;   // selected tax entity unique id
+let currentPrepId         = null;   // assigned_prep emp_id for sending messages
+let currentYear           = null;   // selected tax year
+let pendingFile           = null;   // file awaiting type selection
+let editingSuie           = null;   // suie being edited (null = create mode)
+let currentInvoiceNo      = null;   // invoice currently open in edit modal
+let currentInvFinalAmount = 0;      // final amount for the open invoice
+let currentInvoiceBalDue  = 0;      // computed balance due
 
 /* ── Demo / mock data (activated via ?demo in URL) ───────── */
 const DEMO_DATA = {
@@ -21,6 +24,14 @@ const DEMO_DATA = {
     { tax_entity:'Jones Consulting', tax_type:'LLC',      tax_professional:'Alan Blakeborough', suie:'E002', assigned_prep:'EMP1', cell:'', email:'' }
   ],
   taxYears:  [{ tax_year:2024 }, { tax_year:2023 }, { tax_year:2022 }],
+  paymentTypes: [
+    { payment_type_id: 'CASH', payment_type_desc: 'Cash' },
+    { payment_type_id: 'CHK',  payment_type_desc: 'Check' },
+    { payment_type_id: 'CC',   payment_type_desc: 'Credit Card' },
+    { payment_type_id: 'DC',   payment_type_desc: 'Debit Card' },
+    { payment_type_id: 'ACH',  payment_type_desc: 'ACH' }
+  ],
+  payments: {},  // keyed by invoice_no — demo payment store
   invoices:  [
     { invoice_no:9832,  suie:1, tax_year:2024, inv_desc:'Tax Year 2024 tax return', inv_full_amount:250, inv_discount:10, inv_final_amount:240, inv_date:'2024-08-14', entityname:'Jones, Tom', taxidnumber:'111111122', bal_due:240, prep:'Blakeborough, Alan', client_email:'tjones@test.com', client_cell:'631-555-1122' },
     { invoice_no:12252, suie:1, tax_year:2024, inv_desc:'2024 Tax Return',           inv_full_amount:265, inv_discount:7,  inv_final_amount:258, inv_date:'2024-08-19', entityname:'Jones, Tom', taxidnumber:'111111122', bal_due:258, prep:'Blakeborough, Alan', client_email:'tjones@test.com', client_cell:'631-555-1122' }
@@ -132,6 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bindUpload();
   bindNewEntity();
   bindInvoiceEdit();
+  bindTakePayment();
 });
 
 /* ================================================================
@@ -330,7 +342,7 @@ async function loadInvoices(suie) {
       <td class="num">${esc(inv.inv_full_amount)}</td>
       <td class="num">${esc(inv.inv_discount)}</td>
       <td class="num">${esc(inv.inv_final_amount)}</td>
-      <td class="num">${esc(inv.bal_due)}</td>
+      <td class="num${Number(inv.bal_due) > 0 ? ' bal-due-red' : ''}">${esc(inv.bal_due)}</td>
       <td>${esc(fmtInvDate(inv.inv_date))}</td>
       <td>${esc(inv.prep)}</td>
       <td>${esc(inv.client_email)}</td>
@@ -352,7 +364,7 @@ async function loadInvoices(suie) {
     <td class="total-cell"></td>
     <td class="total-cell num">${totalDiscount}</td>
     <td class="total-cell num">${totalAmount}</td>
-    <td class="total-cell num">${totalBalDue}</td>
+    <td class="total-cell num${totalBalDue > 0 ? ' bal-due-red' : ''}">${totalBalDue}</td>
     <td></td>
     <td></td>
     <td></td>
@@ -870,6 +882,7 @@ function bindInvoiceEdit() {
     document.getElementById('inv-tab-invoice').classList.remove('inv-tab-active');
     document.getElementById('inv-payments-panel').classList.remove('hidden');
     document.getElementById('inv-invoice-panel').classList.add('hidden');
+    loadPayments(currentInvoiceNo);
   });
 
   // Auto-calculate Final Amount when From Value or Discount changes
@@ -889,6 +902,11 @@ async function openInvoiceEdit(listInv) {
     ? listInv
     : await apiFetch(`${API}/invoice-detail/${listInv.invoice_no}`);
   if (!inv) return;
+
+  // Store invoice state for payments tab
+  currentInvoiceNo      = inv.invoice_no;
+  currentInvFinalAmount = Number(inv.inv_final_amount) || 0;
+  currentInvoiceBalDue  = Number(listInv.bal_due) || 0;
 
   // Title
   document.getElementById('inv-modal-title').textContent = `Invoice Number ${inv.invoice_no}`;
@@ -947,6 +965,120 @@ async function openInvoiceEdit(listInv) {
 
 function closeInvoiceEdit() {
   document.getElementById('invoice-edit-overlay').classList.add('hidden');
+}
+
+async function loadPayments(invoiceNo) {
+  if (!invoiceNo) return;
+
+  const payments = DEMO
+    ? (DEMO_DATA.payments[invoiceNo] || [])
+    : await apiFetch(`${API}/payments/${invoiceNo}`);
+  console.log('[loadPayments] invoiceNo:', invoiceNo, 'payments:', payments);
+  if (!payments) return;
+
+  const tbody = document.getElementById('inv-payments-tbody');
+  tbody.innerHTML = '';
+
+  if (!payments.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-row">No payments on file.</td></tr>';
+  } else {
+    payments.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${esc(p.pmt_no)}</td>
+        <td class="num">$${Number(p.payment_amount).toFixed(2)}</td>
+        <td>${esc(p.payment_type_id)}</td>
+        <td>${fmtInvDate(p.payment_date)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  const totalPaid = payments.reduce((sum, p) => sum + Number(p.payment_amount), 0);
+  currentInvoiceBalDue = currentInvFinalAmount - totalPaid;
+
+  const balAmt = document.getElementById('inv-bal-due-amt');
+  balAmt.textContent = `$${currentInvoiceBalDue.toFixed(2)}`;
+  balAmt.closest('.inv-bal-due-label').classList.toggle('bal-due-red', currentInvoiceBalDue > 0);
+
+  document.getElementById('inv-take-payment-btn').disabled = currentInvoiceBalDue <= 0;
+}
+
+function bindTakePayment() {
+  document.getElementById('inv-take-payment-btn').addEventListener('click', openTakePaymentModal);
+  document.getElementById('tp-save-btn').addEventListener('click',          saveTakePayment);
+  document.getElementById('tp-cancel-btn').addEventListener('click',        closeTakePaymentModal);
+}
+
+async function openTakePaymentModal() {
+  document.getElementById('tp-amount-due').textContent = `Total Amount Due $${currentInvoiceBalDue.toFixed(2)}`;
+  document.getElementById('tp-invoice-no').value = currentInvoiceNo;
+  document.getElementById('tp-amount').value     = '';
+
+  // Populate payment type dropdown
+  const sel = document.getElementById('tp-type');
+  sel.innerHTML = '<option value="">— select —</option>';
+  const types = DEMO ? DEMO_DATA.paymentTypes : await apiFetch(`${API}/payment-types`);
+  if (types && types.length) {
+    types.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value       = t.payment_type_id;
+      opt.textContent = t.payment_type_desc;
+      sel.appendChild(opt);
+    });
+  }
+
+  document.getElementById('take-payment-overlay').classList.remove('hidden');
+}
+
+function closeTakePaymentModal() {
+  document.getElementById('take-payment-overlay').classList.add('hidden');
+}
+
+async function saveTakePayment() {
+  const amount = parseFloat(document.getElementById('tp-amount').value);
+  const type   = document.getElementById('tp-type').value;
+
+  if (!amount || amount <= 0) { alert('Please enter a valid payment amount.'); return; }
+  if (!type)                  { alert('Please select a payment type.'); return; }
+  if (amount > currentInvoiceBalDue + 0.001) {
+    alert(`Payment amount cannot exceed balance due of $${currentInvoiceBalDue.toFixed(2)}.`);
+    return;
+  }
+
+  if (DEMO) {
+    if (!DEMO_DATA.payments[currentInvoiceNo]) DEMO_DATA.payments[currentInvoiceNo] = [];
+    const pmts = DEMO_DATA.payments[currentInvoiceNo];
+    const typeLabel = document.getElementById('tp-type').options[document.getElementById('tp-type').selectedIndex].text;
+    pmts.push({
+      pmt_no:         pmts.length + 1,
+      payment_amount: amount,
+      payment_type:   typeLabel,
+      payment_date:   new Date().toISOString()
+    });
+    // Update demo invoice bal_due
+    const inv = DEMO_DATA.invoices.find(i => i.invoice_no === currentInvoiceNo);
+    if (inv) inv.bal_due = Math.max(0, Number(inv.bal_due) - amount);
+    closeTakePaymentModal();
+    loadPayments(currentInvoiceNo);
+    loadInvoices(currentSuie);
+    return;
+  }
+
+  const result = await apiFetch(`${API}/payments`, {
+    method: 'POST',
+    body: JSON.stringify({
+      invoice_no:     currentInvoiceNo,
+      payment_amount: amount,
+      payment_type:   type
+    })
+  });
+
+  if (result && result.success) {
+    closeTakePaymentModal();
+    await loadPayments(currentInvoiceNo);
+    loadInvoices(currentSuie);
+  }
 }
 
 async function saveInvoiceEdit() {

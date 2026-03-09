@@ -592,11 +592,105 @@ input[readonly].inv-input-num { background: #f4f4f4; }
   border-top: 1px solid #ddd;
 }
 
-.inv-payments-placeholder {
-  padding: 30px;
-  text-align: center;
+/* ── Payments panel (inside invoice edit modal) ──────────── */
+.inv-payments-table-wrap {
+  min-height: 200px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+  margin-bottom: 8px;
+}
+
+.inv-payments-table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #e8ecf2;
+}
+
+#inv-payments-table th.num,
+#inv-payments-table td.num {
+  text-align: right;
+}
+
+.inv-payments-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 4px;
+}
+
+.inv-bal-due-label {
   font-size: 12px;
-  color: #888;
+  font-weight: bold;
+  color: #333;
+}
+
+.bal-due-red {
+  color: #cc0000 !important;
+}
+
+/* ── Take Payment modal ──────────────────────────────────── */
+.take-payment-modal {
+  width: 360px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.tp-amount-due {
+  text-align: center;
+  font-weight: bold;
+  font-size: 13px;
+  padding: 14px 0 10px;
+  color: #1a3a5c;
+}
+
+.tp-form {
+  padding: 0 20px 12px;
+}
+
+.tp-field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tp-label {
+  font-size: 12px;
+  color: #333;
+  min-width: 115px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tp-input-sm {
+  width: 100px;
+  font-size: 12px;
+  border: 1px solid #bbb;
+  border-radius: 2px;
+  padding: 3px 5px;
+  font-family: Arial, sans-serif;
+}
+
+input[readonly].tp-input-sm { background: #f4f4f4; }
+
+.tp-select {
+  width: 160px;
+  font-size: 12px;
+  border: 1px solid #bbb;
+  border-radius: 2px;
+  padding: 3px 5px;
+  font-family: Arial, sans-serif;
+}
+
+.tp-footer {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  padding: 10px 0 14px;
+  border-top: 1px solid #ddd;
 }
 
 /* ═══════════════════════════════════════

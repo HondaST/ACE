@@ -406,13 +406,61 @@
 
       <!-- Payments panel -->
       <div id="inv-payments-panel" class="inv-panel hidden">
-        <div class="inv-payments-placeholder">Payment details coming soon.</div>
+        <div class="inv-payments-table-wrap">
+          <table id="inv-payments-table">
+            <thead>
+              <tr>
+                <th>PMT No</th>
+                <th class="num">Amount</th>
+                <th>Type</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="inv-payments-tbody">
+              <tr><td colspan="4" class="empty-row">No payments on file.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inv-payments-footer">
+          <span class="inv-bal-due-label">Balance Due: <span id="inv-bal-due-amt"></span></span>
+          <button class="action-btn" id="inv-take-payment-btn">Take Payment</button>
+        </div>
       </div>
 
       <div class="inv-footer">
         <button class="action-btn" id="inv-print-btn">Print</button>
         <button class="action-btn" id="inv-save-btn">Save</button>
         <button class="action-btn" id="inv-close-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Take Payment modal -->
+  <div id="take-payment-overlay" class="modal-overlay hidden">
+    <div class="modal-box take-payment-modal">
+      <div class="modal-titlebar">
+        <span>Take Payment</span>
+      </div>
+      <div class="tp-amount-due" id="tp-amount-due">Total Amount Due $0.00</div>
+      <div class="tp-form">
+        <div class="tp-field-row">
+          <label class="tp-label">Invoice No:</label>
+          <input type="text" id="tp-invoice-no" class="tp-input-sm" readonly>
+        </div>
+        <div class="tp-field-row">
+          <label class="tp-label">Payment Amount:</label>
+          <input type="number" id="tp-amount" class="tp-input-sm" step="0.01" min="0.01">
+        </div>
+        <div class="tp-field-row">
+          <label class="tp-label">Payment Type:</label>
+          <select id="tp-type" class="tp-select">
+            <option value="">— select —</option>
+          </select>
+        </div>
+      </div>
+      <div class="tp-footer">
+        <button class="action-btn" id="tp-save-btn">Save</button>
+        <button class="action-btn" id="tp-cancel-btn">Cancel</button>
       </div>
     </div>
   </div>
