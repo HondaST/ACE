@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tax Paladin — Employee Dashboard</title>
+  <link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<div id="header">
+  <span class="brand">Tax Paladin</span>
+  <span class="emp-badge">Employee</span>
+  <div class="spacer"></div>
+  <span class="emp-name" id="headerName"></span>
+  <button class="btn-hdr" onclick="openProfileModal()">Profile</button>
+  <button class="btn-hdr" onclick="logout()">Sign Out</button>
+</div>
+
+<!-- ── SECTION 1: SEARCH BAR + SECTION 2: CLIENT INFO ── -->
+<div id="search-row">
+  <div id="search-filters">
+    <!-- Row 1: Client (full width) + Find/Clear on right -->
+    <div class="filter-line">
+      <label>Client:</label>
+      <input type="text" id="f_client" class="f-full" />
+      <button class="btn-find" id="findBtn" onclick="doSearch()">Find</button>
+      <button class="btn-clear" onclick="clearSearch()">Clear</button>
+    </div>
+    <!-- Row 2: Tax ID, Invoice No, Tax Year, eMail -->
+    <div class="filter-line">
+      <label>Tax ID:</label>
+      <input type="text" id="f_taxid" style="width:90px" />
+      <label>Invoice No:</label>
+      <input type="text" id="f_invoice" style="width:60px" />
+      <label>Tax Year:</label>
+      <input type="text" id="f_year" style="width:52px" />
+      <label>eMail:</label>
+      <input type="text" id="f_email" class="f-stretch" />
+    </div>
+    <!-- Row 3: Date range, Cell, Preparer -->
+    <div class="filter-line">
+      <label>Date(s):</label>
+      <input type="text" id="f_date_from" style="width:72px" placeholder="mm/dd/yy" />
+      <span class="sep">-</span>
+      <input type="text" id="f_date_to" style="width:72px" placeholder="mm/dd/yy" />
+      <label>Cell:</label>
+      <input type="text" id="f_cell" style="width:110px" />
+      <label>Preparer:</label>
+      <select id="f_preparer" class="f-stretch"><option value="">All</option></select>
+    </div>
+    <!-- Row 4: Office, Balance Due -->
+    <div class="filter-line">
+      <label>Office:</label>
+      <select id="f_office" style="width:220px"><option value="">All</option></select>
+      <label style="margin-left:20px">Balance Due:</label>
+      <input type="checkbox" id="f_bal_due" />
+    </div>
+  </div>
+
+  <!-- Section 2: Client info (populated when row clicked) -->
+  <div id="client-info-box" class="hidden">
+    <div id="ci-name"></div>
+    <div class="ci-row"><span class="ci-lbl">Cell:</span> <span id="ci-cell"></span> <span class="ci-lbl" style="margin-left:16px">User ID:</span> <span id="ci-userid"></span></div>
+    <div class="ci-row"><span class="ci-lbl">Email:</span> <span id="ci-email"></span></div>
+  </div>
+  <div id="client-info-empty">
+    <span>Click a row to see client info</span>
+  </div>
+</div>
+
+<!-- ── MAIN AREA: left column (grid + bottom) + right messages ── -->
+<div id="main-area">
+
+  <!-- Left column: invoice grid + bottom panels -->
+  <div id="left-column">
+
+    <!-- Section 3: Invoice Grid -->
+    <div id="grid-wrapper">
+      <table id="invoice-grid" class="grid-table">
+        <thead>
+          <tr>
+            <th>Client</th>
+            <th>Tax Number</th>
+            <th>Invoice</th>
+            <th>Tax Year</th>
+            <th>Invoice Desc</th>
+            <th class="num">Form Fee</th>
+            <th class="num">Discount</th>
+            <th class="num">Invoice Amt</th>
+            <th class="num">Bal Due</th>
+            <th>Date</th>
+            <th>Prep</th>
+          </tr>
+        </thead>
+        <tbody id="grid-body">
+          <tr><td colspan="11" class="grid-hint">Use the search above and click Find to load clients</td></tr>
+        </tbody>
+        <tfoot id="grid-foot" style="display:none">
+          <tr>
+            <td colspan="5"></td>
+            <td class="num" id="ft-fee"></td>
+            <td class="num" id="ft-disc"></td>
+            <td class="num" id="ft-amt"></td>
+            <td class="num" id="ft-bal"></td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Bottom Row: Sections 4 & 5 -->
+    <div id="bottom-row">
+
+      <!-- Section 5: Tax Years + action buttons -->
+      <div id="tax-year-panel">
+        <div class="panel-label">Tax Year</div>
+        <div id="tax-year-list"></div>
+        <div id="bottom-actions">
+          <button class="btn-action" onclick="openNewInvoiceModal()" id="createInvBtn" disabled>Create Invoice</button>
+          <button class="btn-action" onclick="openUploadModal()" id="uploadBtn" disabled>Upload</button>
+        </div>
+      </div>
+
+      <!-- Section 4: Files -->
+      <div id="files-panel">
+        <div class="panel-label">Files</div>
+        <div id="files-table-wrap">
+          <table class="grid-table" id="files-grid">
+            <thead>
+              <tr>
+                <th>File ID</th>
+                <th>File Name</th>
+                <th>File Type</th>
+                <th>Created</th>
+                <th>File Size</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="files-body">
+              <tr><td colspan="6" class="grid-hint">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /bottom-row -->
+
+  </div><!-- /left-column -->
+
+  <!-- Sections 6, 7, 8: Messages (full height) -->
+  <div id="messages-panel">
+    <div class="panel-label">Messages</div>
+    <div id="msg-thread"></div>
+    <div id="msg-compose">
+      <div class="msg-field-row">
+        <label>Subject:</label>
+        <input type="text" id="msgSubject" />
+      </div>
+      <div class="msg-field-row msg-text-row">
+        <label>Message:</label>
+        <textarea id="msgText" rows="3"></textarea>
+      </div>
+      <button class="btn-send" onclick="sendMessage()" id="sendMsgBtn" disabled>Send</button>
+    </div>
+  </div>
+
+</div><!-- /main-area -->
+
+<!-- ══════════════ MODALS ══════════════ -->
+
+<!-- New / Edit Invoice -->
+<div class="modal-overlay" id="invoiceModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="invoiceModalTitle">Create Invoice</h2>
+      <button class="modal-close" onclick="closeModal('invoiceModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="invoiceAlert"></div>
+      <div class="inv-tab-bar">
+        <div class="inv-tab active" data-inv-tab="details" onclick="switchInvTab('details')">Invoice Details</div>
+        <div class="inv-tab" id="paymentsTabBtn" data-inv-tab="payments" onclick="switchInvTab('payments')" style="display:none">Payments</div>
+      </div>
+      <div id="invTab-details">
+        <div class="form-row">
+          <div class="form-group"><label>Tax Year</label><input type="number" id="inv_tax_year" min="2000" max="2099" /></div>
+          <div class="form-group"><label>Office</label><select id="inv_office_id"><option value="">-- Select --</option></select></div>
+        </div>
+        <div class="form-row one-col">
+          <div class="form-group"><label>Description</label><input type="text" id="inv_desc" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Form Fee ($)</label><input type="number" id="inv_full_amount" step="0.01" min="0" oninput="calcInvFinal()" /></div>
+          <div class="form-group"><label>Discount ($)</label><input type="number" id="inv_discount" step="0.01" min="0" value="0" oninput="calcInvFinal()" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Invoice Amount ($)</label><input type="number" id="inv_final_amount" step="0.01" readonly style="background:var(--gray-50)" /></div>
+          <div class="form-group"><label>RT</label><select id="inv_rt_ind"><option value="No">No</option><option value="Yes">Yes</option></select></div>
+        </div>
+        <div class="form-row" id="inv_void_group" style="display:none">
+          <div class="form-group"><label>Void</label><select id="inv_void_ind"><option value="N">No</option><option value="Y">Yes</option></select></div>
+        </div>
+      </div>
+      <div id="invTab-payments" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <strong style="font-size:13px">Payment History</strong>
+          <button class="btn-sm-teal" onclick="openPaymentModal()">+ Record Payment</button>
+        </div>
+        <table class="grid-table" style="margin-bottom:8px">
+          <thead><tr><th>#</th><th>Amount</th><th>Type</th><th>Date</th></tr></thead>
+          <tbody id="paymentsBody"><tr><td colspan="4" class="grid-hint">No payments</td></tr></tbody>
+        </table>
+        <div id="paymentsSummary" style="text-align:right;font-size:12px;color:#555"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('invoiceModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveInvoice()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Record Payment -->
+<div class="modal-overlay" id="paymentModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <h2>Record Payment</h2>
+      <button class="modal-close" onclick="closeModal('paymentModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="paymentAlert"></div>
+      <div class="form-row one-col"><div class="form-group"><label>Amount ($)</label><input type="number" id="pmt_amount" step="0.01" min="0.01" /></div></div>
+      <div class="form-row one-col"><div class="form-group"><label>Payment Type</label><select id="pmt_type"><option value="">-- Select --</option></select></div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('paymentModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePayment()">Record</button>
+    </div>
+  </div>
+</div>
+
+<!-- Upload File -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h2>Upload Document</h2>
+      <button class="modal-close" onclick="closeModal('uploadModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="uploadAlert"></div>
+      <div class="form-row one-col"><div class="form-group"><label>File Type</label><select id="upload_file_type"><option value="">-- Select --</option></select></div></div>
+      <div class="form-row one-col"><div class="form-group"><label>Tax Year (optional)</label><input type="number" id="upload_tax_year" min="2000" max="2099" /></div></div>
+      <label class="upload-drop" id="uploadDropZone">
+        <input type="file" id="uploadFileInput" onchange="handleFileSelect(this)" />
+        <div id="uploadDropText">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Click or drag to select a file
+        </div>
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('uploadModal')">Cancel</button>
+      <button class="btn btn-primary" id="doUploadBtn" onclick="uploadFile()">Upload</button>
+    </div>
+  </div>
+</div>
+
+<!-- Profile / Password -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <h2>My Profile</h2>
+      <button class="modal-close" onclick="closeModal('profileModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="profileAlert"></div>
+      <p style="font-size:13px;color:#555;margin-bottom:14px">Signed in as <strong id="profileName"></strong></p>
+      <h4 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#555;margin-bottom:10px">Change Password</h4>
+      <div class="form-row one-col"><div class="form-group"><label>Current Password</label><input type="password" id="prof_current_pw" /></div></div>
+      <div class="form-row one-col"><div class="form-group"><label>New Password</label><input type="password" id="prof_new_pw" /></div></div>
+      <div class="form-row one-col"><div class="form-group"><label>Confirm New Password</label><input type="password" id="prof_confirm_pw" /></div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('profileModal')">Close</button>
+      <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/dashboard.js"></script>
+</body>
+</html>
