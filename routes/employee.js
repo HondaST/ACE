@@ -364,14 +364,15 @@ router.post('/invoices', async (req, res) => {
       .input('inv_discount',     sql.Decimal(10,2),  Number(inv_discount)     || 0)
       .input('inv_final_amount', sql.Decimal(10,2),  inv_final_amount)
       .input('office_id',        sql.NVarChar(50),   office_id || null)
-      .input('rt_ind',           sql.NVarChar(3),    rt_ind || 'No')
+      .input('rt_ind',           sql.NVarChar(1),    rt_ind || 'N')
       .query(`
         INSERT INTO invoice
-          (suie, emp_id, tax_year, inv_desc, inv_full_amount, inv_discount,
+          (suie, sui, emp_id, tax_year, inv_desc, inv_full_amount, inv_discount,
            inv_final_amount, office_id, rt_ind, inv_date, void_ind)
         OUTPUT INSERTED.invoice_no
         VALUES
-          (@suie, @emp_id, @tax_year, @inv_desc, @inv_full_amount, @inv_discount,
+          (@suie, (SELECT sui FROM people_entity WHERE suie = @suie),
+           @emp_id, @tax_year, @inv_desc, @inv_full_amount, @inv_discount,
            @inv_final_amount, @office_id, @rt_ind, GETDATE(), 'N')
       `);
     res.json({ success: true, invoice_no: result.recordset[0].invoice_no });
@@ -427,9 +428,11 @@ router.get('/payments/:invoice_no', async (req, res) => {
         SELECT p.sequence_no AS pmt_no,
                p.payment_amount,
                ISNULL(pt.payment_type_desc, p.payment_type_id) AS payment_type_desc,
-               p.payment_date
+               p.payment_date,
+               i.inv_final_amount
         FROM   payment p
         LEFT JOIN payment_type pt ON pt.payment_type_id = p.payment_type_id
+        LEFT JOIN invoice i ON i.invoice_no = p.invoice_no
         WHERE  p.invoice_no = @invoice_no
         ORDER BY p.sequence_no ASC
       `);

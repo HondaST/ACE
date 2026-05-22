@@ -372,7 +372,7 @@ async function openEditInvoiceModal(invoiceNo) {
   document.getElementById('inv_full_amount').value  = i.inv_full_amount || '';
   document.getElementById('inv_discount').value     = i.inv_discount    || '0';
   document.getElementById('inv_final_amount').value = i.inv_final_amount|| '';
-  document.getElementById('inv_rt_ind').value       = i.rt_ind          || 'No';
+  document.getElementById('inv_rt_ind').value       = i.rt_ind === 'Y' ? 'Yes' : 'No';
   document.getElementById('inv_void_ind').value     = i.void_ind        || 'N';
 
   switchInvTab('details');
@@ -401,7 +401,7 @@ async function saveInvoice() {
     inv_full_amount: document.getElementById('inv_full_amount').value || 0,
     inv_discount:    document.getElementById('inv_discount').value    || 0,
     office_id:       document.getElementById('inv_office_id').value   || null,
-    rt_ind:          document.getElementById('inv_rt_ind').value,
+    rt_ind:          document.getElementById('inv_rt_ind').value === 'Yes' ? 'Y' : 'N',
     void_ind:        currentInvoiceNo ? document.getElementById('inv_void_ind').value : 'N'
   };
 
@@ -430,9 +430,12 @@ async function loadPayments() {
   if (!payments) return;
 
   const tbody = document.getElementById('paymentsBody');
+  const recordBtn = document.querySelector('#invTab-payments .btn-sm-teal');
+
   if (!payments.length) {
     tbody.innerHTML = '<tr><td colspan="4" class="grid-hint">No payments</td></tr>';
     document.getElementById('paymentsSummary').textContent = '';
+    if (recordBtn) recordBtn.disabled = false;
     return;
   }
 
@@ -445,8 +448,16 @@ async function loadPayments() {
     </tr>
   `).join('');
 
-  const total = payments.reduce((s, p) => s + Number(p.payment_amount), 0);
-  document.getElementById('paymentsSummary').textContent = `Total paid: ${fmt$(total)}`;
+  const totalPaid = payments.reduce((s, p) => s + Number(p.payment_amount), 0);
+  document.getElementById('paymentsSummary').textContent = `Total paid: ${fmt$(totalPaid)}`;
+
+  // Disable Record Payment if invoice is paid in full
+  if (recordBtn) {
+    const invoiceFinal = Number(payments[0]?.inv_final_amount) || 0;
+    const paidInFull   = invoiceFinal > 0 && totalPaid >= invoiceFinal;
+    recordBtn.disabled = paidInFull;
+    recordBtn.title    = paidInFull ? 'Invoice is paid in full' : '';
+  }
 }
 
 async function openPaymentModal() {
@@ -608,6 +619,49 @@ async function loadPaymentTypeOptions(selectId) {
   sel.innerHTML = '<option value="">-- Select --</option>' +
     (_cache.paymentTypes || []).map(pt => `<option value="${pt.payment_type_id}">${esc(pt.payment_type_desc)}</option>`).join('');
 }
+
+// ── RIGHT-CLICK CONTEXT MENU (Tax Number column) ───────
+(function() {
+  const menu = document.getElementById('ctx-menu');
+
+  document.getElementById('grid-body').addEventListener('contextmenu', e => {
+    const td = e.target.closest('td');
+    if (!td) return;
+    const tr = td.closest('tr');
+    if (!tr) return;
+
+    // Tax Number is the 2nd cell (index 1)
+    const cells = tr.querySelectorAll('td');
+    if (td !== cells[1]) return;
+
+    const taxNo = td.textContent.trim();
+    if (!taxNo) return;
+
+    e.preventDefault();
+    menu.style.display = 'block';
+    menu.style.left = e.clientX + 'px';
+    menu.style.top  = e.clientY + 'px';
+
+    document.getElementById('ctx-search-taxid').onclick = () => {
+      menu.style.display = 'none';
+      // Clear other filters, set tax id, search
+      ['f_client','f_invoice','f_year','f_email','f_date_from','f_date_to','f_cell','f_preparer','f_office'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('f_bal_due').checked = false;
+      document.getElementById('f_taxid').value = taxNo;
+      doSearch();
+    };
+  });
+
+  // Dismiss on any click elsewhere
+  document.addEventListener('click', () => { menu.style.display = 'none'; });
+  document.addEventListener('contextmenu', e => {
+    if (!e.target.closest('#ctx-menu') && !e.target.closest('#grid-body')) {
+      menu.style.display = 'none';
+    }
+  });
+})();
 
 // ── INIT: populate search dropdowns on load ────────────
 async function initSearchDropdowns() {
