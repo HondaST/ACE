@@ -47,7 +47,7 @@ html, body {
 
 .hdr-menu { position: relative; }
 .hdr-menu-btn { margin-left: 10px; }
-.hdr-dropdown { display: none; position: absolute; top: calc(100% + 4px); left: 0; min-width: 180px; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.15); z-index: 1000; overflow: hidden; }
+.hdr-dropdown { display: none; position: absolute; top: calc(100% + 4px); left: 0; min-width: 180px; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.15); z-index: 1000; overflow: visible; padding: 4px 0; }
 .hdr-dropdown a { display: block; padding: 9px 14px; font-size: 13px; color: #1f2937; text-decoration: none; white-space: nowrap; }
 .hdr-dropdown a:hover { background: #f3f4f6; }
 .hdr-dropdown .dropdown-divider { height: 1px; background: #e5e7eb; margin: 4px 0; }
