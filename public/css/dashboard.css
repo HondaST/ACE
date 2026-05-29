@@ -54,6 +54,12 @@ html, body {
 .hdr-menu:focus-within .hdr-dropdown,
 .hdr-menu.open .hdr-dropdown { display: block; }
 
+.hdr-submenu { position: relative; }
+.hdr-submenu-trigger { display: block; padding: 9px 14px; font-size: 13px; color: #1f2937; text-decoration: none; white-space: nowrap; cursor: pointer; user-select: none; }
+.hdr-submenu-trigger:hover { background: #f3f4f6; }
+.hdr-submenu-panel { display: none; position: absolute; top: 0; left: 100%; min-width: 160px; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.15); z-index: 1001; overflow: hidden; }
+.hdr-submenu:hover .hdr-submenu-panel { display: block; }
+
 /* ── SEARCH ROW (Section 1 + 2) ── */
 #search-row {
   height: var(--search-h);

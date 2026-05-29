@@ -15,7 +15,14 @@
   <div class="hdr-menu">
     <button class="btn-hdr hdr-menu-btn">Reports ▾</button>
     <div class="hdr-dropdown">
-      <!-- report items go here -->
+      <div class="hdr-submenu">
+        <a class="hdr-submenu-trigger">Available Call Lists ▶</a>
+        <div class="hdr-submenu-panel">
+          <a href="#" onclick="runCallList('last_year');return false;">Last Year</a>
+          <a href="#" onclick="runCallList('two_years_ago');return false;">Two Years Ago</a>
+          <a href="#" onclick="runCallList('older');return false;">Older Clients</a>
+        </div>
+      </div>
     </div>
   </div>
   <div class="spacer"></div>

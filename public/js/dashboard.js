@@ -37,6 +37,13 @@ async function apiFetch(url, opts = {}) {
   return res.json();
 }
 
+// ── SECTION: REPORTS ──────────────────────────────────
+function runCallList(period) {
+  document.querySelector('.hdr-menu').classList.remove('open');
+  // TODO: implement call list report for period: last_year | two_years_ago | older
+  alert(`Call list: ${period} — coming soon`);
+}
+
 function logout() {
   localStorage.removeItem('emp_token');
   localStorage.removeItem('emp_name');
