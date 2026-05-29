@@ -41,7 +41,7 @@ router.get('/info', async (req, res) => {
 
 router.get('/search', async (req, res) => {
   try {
-    const { client, tax_id, invoice_no, tax_year, email, date_from, date_to, cell, balance_due, preparer, office_id } = req.query;
+    const { client, tax_id, invoice_no, tax_year, email, date_from, date_to, cell, balance_due, preparer, office_id, season_id } = req.query;
 
     const pool    = await getPool();
     const request = pool.request().input('emp_id', sql.NVarChar(50), req.user.emp_id);
@@ -90,6 +90,11 @@ router.get('/search', async (req, res) => {
     }
     if (balance_due === 'true') {
       where += ` AND (i.inv_final_amount - ISNULL((SELECT SUM(payment_amount) FROM payment WHERE invoice_no = i.invoice_no), 0)) > 0`;
+    }
+    if (season_id) {
+      request.input('season_id', sql.Int, parseInt(season_id));
+      where += ` AND i.inv_date BETWEEN (SELECT season_start FROM season WHERE season_id = @season_id)
+                                     AND (SELECT season_end   FROM season WHERE season_id = @season_id)`;
     }
 
     const result = await request.query(`
@@ -326,6 +331,7 @@ router.get('/clients/:suie/invoices', async (req, res) => {
                i.rt_ind,
                i.office_id,
                i.emp_id,
+               i.inv_note,
                prep        = e.last_name + ', ' + e.first_name
         FROM   invoice  i
         LEFT JOIN employee e ON i.emp_id = e.emp_id
@@ -341,7 +347,7 @@ router.get('/clients/:suie/invoices', async (req, res) => {
 // Create a new invoice
 router.post('/invoices', async (req, res) => {
   try {
-    const { suie, tax_year, inv_desc, inv_full_amount, inv_discount, office_id, rt_ind } = req.body;
+    const { suie, tax_year, inv_desc, inv_full_amount, inv_discount, office_id, rt_ind, inv_note } = req.body;
     if (!suie) return res.status(400).json({ error: 'suie is required' });
 
     const inv_final_amount = (Number(inv_full_amount) || 0) - (Number(inv_discount) || 0);
@@ -365,15 +371,16 @@ router.post('/invoices', async (req, res) => {
       .input('inv_final_amount', sql.Decimal(10,2),  inv_final_amount)
       .input('office_id',        sql.NVarChar(50),   office_id || null)
       .input('rt_ind',           sql.NVarChar(1),    rt_ind || 'N')
+      .input('inv_note',         sql.NVarChar(2000), inv_note || null)
       .query(`
         INSERT INTO invoice
           (suie, sui, emp_id, tax_year, inv_desc, inv_full_amount, inv_discount,
-           inv_final_amount, office_id, rt_ind, inv_date, void_ind)
+           inv_final_amount, office_id, rt_ind, inv_date, void_ind, inv_note)
         OUTPUT INSERTED.invoice_no
         VALUES
           (@suie, (SELECT sui FROM people_entity WHERE suie = @suie),
            @emp_id, @tax_year, @inv_desc, @inv_full_amount, @inv_discount,
-           @inv_final_amount, @office_id, @rt_ind, GETDATE(), 'N')
+           @inv_final_amount, @office_id, @rt_ind, GETDATE(), 'N', @inv_note)
       `);
     res.json({ success: true, invoice_no: result.recordset[0].invoice_no });
   } catch (err) {
@@ -384,13 +391,13 @@ router.post('/invoices', async (req, res) => {
 // Update an invoice
 router.put('/invoices/:invoice_no', async (req, res) => {
   try {
-    const { tax_year, inv_desc, inv_full_amount, inv_discount, office_id, rt_ind, void_ind } = req.body;
+    const { tax_year, inv_desc, inv_full_amount, inv_discount, office_id, rt_ind, void_ind, inv_note } = req.body;
     const inv_final_amount = (Number(inv_full_amount) || 0) - (Number(inv_discount) || 0);
 
     const pool = await getPool();
     await pool.request()
-      .input('invoice_no',       sql.Int,           parseInt(req.params.invoice_no))
-      .input('emp_id',           sql.NVarChar(50),  req.user.emp_id)
+      .input('invoice_no',       sql.Int,            parseInt(req.params.invoice_no))
+      .input('emp_id',           sql.NVarChar(50),   req.user.emp_id)
       .input('tax_year',         sql.Int,            tax_year ? parseInt(tax_year) : null)
       .input('inv_desc',         sql.NVarChar(200),  inv_desc || null)
       .input('inv_full_amount',  sql.Decimal(10,2),  Number(inv_full_amount)  || 0)
@@ -399,6 +406,7 @@ router.put('/invoices/:invoice_no', async (req, res) => {
       .input('office_id',        sql.NVarChar(50),   office_id || null)
       .input('rt_ind',           sql.NVarChar(3),    rt_ind || 'No')
       .input('void_ind',         sql.NVarChar(1),    void_ind || 'N')
+      .input('inv_note',         sql.NVarChar(2000), inv_note || null)
       .query(`
         UPDATE invoice
         SET    tax_year         = @tax_year,
@@ -408,7 +416,8 @@ router.put('/invoices/:invoice_no', async (req, res) => {
                inv_final_amount = @inv_final_amount,
                office_id        = @office_id,
                rt_ind           = @rt_ind,
-               void_ind         = @void_ind
+               void_ind         = @void_ind,
+               inv_note         = @inv_note
         WHERE  invoice_no = @invoice_no
           AND  emp_id     = @emp_id
       `);
@@ -703,6 +712,17 @@ router.get('/payment-types', async (req, res) => {
     const pool = await getPool();
     const result = await pool.request()
       .query(`SELECT payment_type_id, payment_type_desc FROM payment_type ORDER BY payment_type_desc`);
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/seasons', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .query(`SELECT season_id FROM season ORDER BY season_id DESC`);
     res.json(result.recordset);
   } catch (err) {
     res.status(500).json({ error: err.message });

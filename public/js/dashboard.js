@@ -89,6 +89,7 @@ async function doSearch() {
   if (v('f_preparer'))  params.set('preparer',    v('f_preparer'));
   if (v('f_office'))    params.set('office_id',   v('f_office'));
   if (document.getElementById('f_bal_due').checked) params.set('balance_due', 'true');
+  if (v('f_season'))      params.set('season_id',   v('f_season'));
 
   const btn = document.getElementById('findBtn');
   btn.disabled = true;
@@ -104,10 +105,11 @@ async function doSearch() {
 }
 
 function clearSearch() {
-  ['f_client','f_taxid','f_invoice','f_year','f_email','f_date_from','f_date_to','f_cell','f_preparer','f_office'].forEach(id => {
+  ['f_client','f_taxid','f_invoice','f_year','f_email','f_date_from','f_date_to','f_cell','f_preparer','f_office','f_season'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('f_bal_due').checked = false;
+  document.getElementById('invoices-found').textContent = '';
   clearSelection();
   document.getElementById('grid-body').innerHTML =
     '<tr><td colspan="11" class="grid-hint">Use the search above and click Find to load clients</td></tr>';
@@ -117,6 +119,7 @@ function clearSearch() {
 // ── SECTION 3: INVOICE GRID ───────────────────────────
 function renderGrid(rows) {
   const tbody = document.getElementById('grid-body');
+  document.getElementById('invoices-found').textContent = `Invoices Found = ${rows.length.toLocaleString('en-US')}`;
 
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="11" class="grid-hint">No results found</td></tr>';
@@ -340,6 +343,7 @@ async function openNewInvoiceModal() {
   document.getElementById('inv_discount').value    = '0';
   document.getElementById('inv_final_amount').value= '';
   document.getElementById('inv_rt_ind').value      = 'No';
+  document.getElementById('inv_note').value         = '';
   document.getElementById('inv_void_group').style.display = 'none';
   document.getElementById('paymentsTabBtn').style.display = 'none';
   document.getElementById('inv_office_id').innerHTML = '<option value="">-- Select --</option>';
@@ -374,6 +378,8 @@ async function openEditInvoiceModal(invoiceNo) {
   document.getElementById('inv_final_amount').value = i.inv_final_amount|| '';
   document.getElementById('inv_rt_ind').value       = i.rt_ind === 'Y' ? 'Yes' : 'No';
   document.getElementById('inv_void_ind').value     = i.void_ind        || 'N';
+  document.getElementById('inv_date_display').value = i.inv_date ? fmtDate(i.inv_date) : '';
+  document.getElementById('inv_note').value         = i.inv_note        || '';
 
   switchInvTab('details');
   openModal('invoiceModal');
@@ -402,7 +408,8 @@ async function saveInvoice() {
     inv_discount:    document.getElementById('inv_discount').value    || 0,
     office_id:       document.getElementById('inv_office_id').value   || null,
     rt_ind:          document.getElementById('inv_rt_ind').value === 'Yes' ? 'Y' : 'N',
-    void_ind:        currentInvoiceNo ? document.getElementById('inv_void_ind').value : 'N'
+    void_ind:        currentInvoiceNo ? document.getElementById('inv_void_ind').value : 'N',
+    inv_note:        document.getElementById('inv_note').value.trim() || null
   };
 
   const url = currentInvoiceNo
@@ -645,7 +652,7 @@ async function loadPaymentTypeOptions(selectId) {
     document.getElementById('ctx-search-taxid').onclick = () => {
       menu.style.display = 'none';
       // Clear other filters, set tax id, search
-      ['f_client','f_invoice','f_year','f_email','f_date_from','f_date_to','f_cell','f_preparer','f_office'].forEach(id => {
+      ['f_client','f_invoice','f_year','f_email','f_date_from','f_date_to','f_cell','f_preparer','f_office','f_season'].forEach(id => {
         document.getElementById(id).value = '';
       });
       document.getElementById('f_bal_due').checked = false;
@@ -679,6 +686,14 @@ async function initSearchDropdowns() {
     const sel = document.getElementById('f_office');
     sel.innerHTML = '<option value="">All</option>' +
       _cache.offices.map(o => `<option value="${o.office_id}">${esc(o.office_desc)}</option>`).join('');
+  }
+
+  // Seasons
+  const seasons = await apiFetch('/api/employee/seasons');
+  if (seasons) {
+    const sel = document.getElementById('f_season');
+    sel.innerHTML = '<option value="">All</option>' +
+      seasons.map(s => `<option value="${s.season_id}">${s.season_id}</option>`).join('');
   }
 }
 

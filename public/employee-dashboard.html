@@ -56,6 +56,9 @@
       <select id="f_office" style="width:220px"><option value="">All</option></select>
       <label style="margin-left:20px">Balance Due:</label>
       <input type="checkbox" id="f_bal_due" />
+      <label style="margin-left:20px">Season:</label>
+      <select id="f_season" style="width:100px"><option value="">All</option></select>
+      <span id="invoices-found" style="margin-left:20px"></span>
     </div>
   </div>
 
@@ -201,6 +204,10 @@
         </div>
         <div class="form-row" id="inv_void_group" style="display:none">
           <div class="form-group"><label>Void</label><select id="inv_void_ind"><option value="N">No</option><option value="Y">Yes</option></select></div>
+          <div class="form-group"><label>Invoice Date</label><input type="text" id="inv_date_display" readonly style="background:var(--gray-50)" /></div>
+        </div>
+        <div class="form-row one-col">
+          <div class="form-group"><label>Note</label><textarea id="inv_note" maxlength="2000" rows="4" style="resize:vertical;white-space:pre-wrap"></textarea></div>
         </div>
       </div>
       <div id="invTab-payments" style="display:none">
