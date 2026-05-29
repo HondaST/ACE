@@ -2,6 +2,14 @@
    Tax Paladin — Employee Portal Dashboard
    ══════════════════════════════════════════════════════ */
 
+// ── Reports menu toggle ────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const menu = document.querySelector('.hdr-menu');
+  const btn  = menu.querySelector('.hdr-menu-btn');
+  btn.addEventListener('click', e => { e.stopPropagation(); menu.classList.toggle('open'); });
+  document.addEventListener('click', () => menu.classList.remove('open'));
+});
+
 // ── Auth guard ─────────────────────────────────────────
 const empToken = localStorage.getItem('emp_token');
 const empName  = localStorage.getItem('emp_name') || '';
