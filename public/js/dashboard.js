@@ -88,8 +88,9 @@ async function doSearch() {
   if (v('f_cell'))      params.set('cell',        v('f_cell'));
   if (v('f_preparer'))  params.set('preparer',    v('f_preparer'));
   if (v('f_office'))    params.set('office_id',   v('f_office'));
-  if (document.getElementById('f_bal_due').checked) params.set('balance_due', 'true');
-  if (v('f_season'))      params.set('season_id',   v('f_season'));
+  if (document.getElementById('f_bal_due').checked)  params.set('balance_due', 'true');
+  if (v('f_season'))                                  params.set('season_id',   v('f_season'));
+  if (document.getElementById('f_available').checked) params.set('available',   'true');
 
   const btn = document.getElementById('findBtn');
   btn.disabled = true;
@@ -109,6 +110,7 @@ function clearSearch() {
     document.getElementById(id).value = '';
   });
   document.getElementById('f_bal_due').checked = false;
+  document.getElementById('f_available').checked = false;
   document.getElementById('invoices-found').textContent = '';
   clearSelection();
   document.getElementById('grid-body').innerHTML =

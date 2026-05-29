@@ -41,7 +41,7 @@ router.get('/info', async (req, res) => {
 
 router.get('/search', async (req, res) => {
   try {
-    const { client, tax_id, invoice_no, tax_year, email, date_from, date_to, cell, balance_due, preparer, office_id, season_id } = req.query;
+    const { client, tax_id, invoice_no, tax_year, email, date_from, date_to, cell, balance_due, preparer, office_id, season_id, available } = req.query;
 
     const pool    = await getPool();
     const request = pool.request().input('emp_id', sql.NVarChar(50), req.user.emp_id);
@@ -95,6 +95,15 @@ router.get('/search', async (req, res) => {
       request.input('season_id', sql.Int, parseInt(season_id));
       where += ` AND i.inv_date BETWEEN (SELECT season_start FROM season WHERE season_id = @season_id)
                                      AND (SELECT season_end   FROM season WHERE season_id = @season_id)`;
+    }
+    if (available === 'true' && season_id) {
+      where += ` AND NOT EXISTS (
+        SELECT 1 FROM invoice i2
+        WHERE  i2.suie     = pe.suie
+          AND  i2.void_ind = 'N'
+          AND  i2.inv_date BETWEEN (SELECT season_start FROM season WHERE season_id = @season_id)
+                               AND (SELECT season_end   FROM season WHERE season_id = @season_id)
+      )`;
     }
 
     const result = await request.query(`
