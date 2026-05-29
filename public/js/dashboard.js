@@ -150,7 +150,7 @@ function renderGrid(rows) {
                 ondblclick="onRowDblClick(this)">
       <td>${esc(r.display_name)}</td>
       <td>${esc(r.taxidnumber || '')}</td>
-      <td>${r.invoice_no ? r.invoice_no + voidBadge : ''}</td>
+      <td>${r.invoice_no ? r.invoice_no + voidBadge + (r.inv_note && r.inv_note.trim() ? ' <span class="note-badge" title="Has note">!</span>' : '') : ''}</td>
       <td>${r.tax_year || ''}</td>
       <td>${esc(r.inv_desc || '')}</td>
       <td class="num">${r.invoice_no ? fmt$(r.inv_full_amount)  : ''}</td>

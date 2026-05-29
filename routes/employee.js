@@ -123,6 +123,7 @@ router.get('/search', async (req, res) => {
              i.void_ind,
              i.rt_ind,
              i.office_id,
+             i.inv_note,
              bal_due = CASE WHEN i.invoice_no IS NULL THEN NULL
                             ELSE i.inv_final_amount
                               - ISNULL((SELECT SUM(payment_amount) FROM payment WHERE invoice_no = i.invoice_no), 0)
