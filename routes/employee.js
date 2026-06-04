@@ -826,6 +826,22 @@ router.get('/seasons', async (req, res) => {
   }
 });
 
+router.get('/current-season', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .query(`
+        SELECT season_id
+        FROM   season
+        WHERE  season_start <= CAST(GETDATE() AS DATE)
+          AND  season_end   >= CAST(GETDATE() AS DATE)
+      `);
+    res.json(result.recordset[0] || null);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/offices', async (req, res) => {
   try {
     const pool = await getPool();

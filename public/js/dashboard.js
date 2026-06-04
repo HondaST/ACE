@@ -16,7 +16,41 @@ const empName  = localStorage.getItem('emp_name') || '';
 if (!empToken) window.location.href = '/';
 document.getElementById('headerName').textContent = empName;
 
+// ── Global application object ──────────────────────────
+const ACE = {
+  // Current session info (populated at login / token decode)
+  session: {
+    empId:    null,
+    empName:  empName || null
+  },
+
+  // UI state — what the user currently has selected / open
+  ui: {
+    currentSuie:      null,   // selected entity (suie)
+    currentInvoiceNo: null,   // invoice open in modal
+    selectedTaxYear:  null,   // tax year filter for files
+    uploadFile:       null    // pending upload File object
+  },
+
+  // Lookup / reference data cached after first fetch
+  cache: {
+    offices:       null,
+    fileTypes:     null,
+    paymentTypes:  null,
+    lifeCycles:    null,
+    seasons:       null,
+    preparers:     null,
+    currentSeason: null   // season_id of the active season (set at startup)
+  },
+
+  // App-wide config / constants
+  config: {
+    apiBase: '/api/employee'
+  }
+};
+
 // ── State ──────────────────────────────────────────────
+// Convenience aliases kept for backwards compatibility
 let currentSuie      = null;  // selected entity
 let currentInvoiceNo = null;  // invoice open in modal
 let selectedTaxYear  = null;  // tax year filter for files
@@ -388,7 +422,7 @@ async function openNewInvoiceModal() {
   currentInvoiceNo = null;
   clearAlert('invoiceAlert');
   document.getElementById('invoiceModalTitle').textContent = 'Create Invoice';
-  document.getElementById('inv_tax_year').value    = new Date().getFullYear();
+  document.getElementById('inv_tax_year').value    = ACE.cache.currentSeason - 1;
   document.getElementById('inv_desc').value        = '';
   document.getElementById('inv_full_amount').value = '';
   document.getElementById('inv_discount').value    = '0';
@@ -798,10 +832,15 @@ async function initSearchDropdowns() {
   // Seasons
   const seasons = await apiFetch('/api/employee/seasons');
   if (seasons) {
+    ACE.cache.seasons = seasons;
     const sel = document.getElementById('f_season');
     sel.innerHTML = '<option value="">All</option>' +
       seasons.map(s => `<option value="${s.season_id}">${s.season_id}</option>`).join('');
   }
+
+  // Current season — determined server-side by today's date
+  const currentSeason = await apiFetch('/api/employee/current-season');
+  ACE.cache.currentSeason = currentSeason?.season_id ?? null;
 
   // Status (life cycle)
   const lifeCycles = await apiFetch('/api/employee/life-cycles');
