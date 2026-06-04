@@ -41,7 +41,7 @@ router.get('/info', async (req, res) => {
 
 router.get('/search', async (req, res) => {
   try {
-    const { client, tax_id, invoice_no, tax_year, email, date_from, date_to, cell, balance_due, preparer, office_id, season_id, available } = req.query;
+    const { client, tax_id, invoice_no, tax_year, email, date_from, date_to, cell, balance_due, preparer, office_id, season_id, available, life_cycle_status } = req.query;
 
     const pool    = await getPool();
     const request = pool.request().input('emp_id', sql.NVarChar(50), req.user.emp_id);
@@ -96,6 +96,10 @@ router.get('/search', async (req, res) => {
       where += ` AND i.inv_date BETWEEN (SELECT season_start FROM season WHERE season_id = @season_id)
                                      AND (SELECT season_end   FROM season WHERE season_id = @season_id)`;
     }
+    if (life_cycle_status) {
+      request.input('life_cycle_status', sql.Int, parseInt(life_cycle_status));
+      where += ` AND cs.life_cycle_status = @life_cycle_status`;
+    }
     if (available === 'true') {
       where += ` AND NOT EXISTS (
         SELECT 1 FROM invoice i2
@@ -140,6 +144,8 @@ router.get('/search', async (req, res) => {
              prep_name = CASE WHEN e2.emp_id IS NULL THEN NULL
                               ELSE e2.last_name + ', ' + e2.first_name
                          END,
+             -- Status from client_status for current season
+             lc.life_cycle_desc AS status_desc,
              -- Account owner info (Section 2)
              owner_name  = p.first_name + ' ' + p.last_name,
              owner_cell  = p.cell,
@@ -150,6 +156,10 @@ router.get('/search', async (req, res) => {
       LEFT JOIN invoice     i  ON pe.suie = i.suie
       LEFT JOIN employee    e2 ON i.emp_id = e2.emp_id
       LEFT JOIN people      p  ON pe.sui   = p.sui
+      LEFT JOIN client_status cs ON cs.suie = pe.suie
+                                AND cs.invoice_no = i.invoice_no
+                                AND cs.season_id = (SELECT TOP 1 season_id FROM season WHERE season_start <= GETDATE() AND season_end >= GETDATE() ORDER BY season_id DESC)
+      LEFT JOIN life_cycle lc ON lc.life_cycle_status = cs.life_cycle_status
       WHERE  ${where}
       ORDER BY display_name ASC, i.inv_date DESC
     `);
@@ -694,6 +704,83 @@ router.post('/messages', async (req, res) => {
 });
 
 // ── Lookups ───────────────────────────────────────────────────
+
+router.get('/life-cycles', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .query(`SELECT life_cycle_status, life_cycle_desc FROM life_cycle ORDER BY life_cycle_status`);
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/clients/:suie/status', async (req, res) => {
+  const empId = req.user.emp_id;
+  const suie  = String(req.params.suie);
+  try {
+    const pool = await getPool();
+    // verify entity is assigned to this employee
+    const auth = await pool.request()
+      .input('suie', sql.NVarChar, suie)
+      .input('emp_id', sql.VarChar, empId)
+      .query(`SELECT 1 FROM people_entity WHERE suie=@suie AND assigned_prep=@emp_id`);
+    if (!auth.recordset.length) return res.status(403).json({ error: 'Forbidden' });
+
+    const season = await pool.request()
+      .query(`SELECT TOP 1 season_id FROM season WHERE season_start <= GETDATE() AND season_end >= GETDATE() ORDER BY season_id DESC`);
+    if (!season.recordset.length) return res.status(404).json({ error: 'No active season' });
+    const season_id = season.recordset[0].season_id;
+
+    const result = await pool.request()
+      .input('suie', sql.NVarChar, suie)
+      .input('season_id', sql.Int, season_id)
+      .query(`SELECT life_cycle_status, invoice_no FROM client_status WHERE suie=@suie AND season_id=@season_id`);
+    res.json(result.recordset[0] || null);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/clients/:suie/status', async (req, res) => {
+  const empId = req.user.emp_id;
+  const suie  = String(req.params.suie);
+  const { life_cycle_status, invoice_no } = req.body;
+  if (!life_cycle_status || !invoice_no) return res.status(400).json({ error: 'life_cycle_status and invoice_no required' });
+  try {
+    const pool = await getPool();
+    const auth = await pool.request()
+      .input('suie', sql.NVarChar, suie)
+      .input('emp_id', sql.VarChar, empId)
+      .query(`SELECT 1 FROM people_entity WHERE suie=@suie AND assigned_prep=@emp_id`);
+    if (!auth.recordset.length) return res.status(403).json({ error: 'Forbidden' });
+
+    const season = await pool.request()
+      .query(`SELECT TOP 1 season_id FROM season WHERE season_start <= GETDATE() AND season_end >= GETDATE() ORDER BY season_id DESC`);
+    if (!season.recordset.length) return res.status(404).json({ error: 'No active season' });
+    const season_id = season.recordset[0].season_id;
+
+    await pool.request()
+      .input('suie', sql.NVarChar, suie)
+      .input('season_id', sql.Int, season_id)
+      .input('life_cycle_status', sql.Int, life_cycle_status)
+      .input('invoice_no', sql.Int, invoice_no)
+      .query(`
+        MERGE client_status AS tgt
+        USING (SELECT @suie AS suie, @season_id AS season_id) AS src
+          ON tgt.suie = src.suie AND tgt.season_id = src.season_id
+        WHEN MATCHED THEN
+          UPDATE SET life_cycle_status=@life_cycle_status, invoice_no=@invoice_no
+        WHEN NOT MATCHED THEN
+          INSERT (suie, season_id, life_cycle_status, invoice_no)
+          VALUES (@suie, @season_id, @life_cycle_status, @invoice_no);
+      `);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 router.get('/entity-types', async (req, res) => {
   try {

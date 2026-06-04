@@ -74,6 +74,7 @@ function esc(s) {
 // ── Modal helpers ──────────────────────────────────────
 function openModal(id)  { document.getElementById(id).classList.add('open');    }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function aceError(msg) { document.getElementById('aceErrorText').textContent = msg; openModal('aceErrorModal'); }
 function showAlert(id, msg, type='error') {
   const el = document.getElementById(id);
   if (el) el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
@@ -103,9 +104,10 @@ async function doSearch() {
   if (v('f_cell'))      params.set('cell',        v('f_cell'));
   if (v('f_preparer'))  params.set('preparer',    v('f_preparer'));
   if (v('f_office'))    params.set('office_id',   v('f_office'));
-  if (document.getElementById('f_bal_due').checked)  params.set('balance_due', 'true');
-  if (v('f_season'))                                  params.set('season_id',   v('f_season'));
-  if (document.getElementById('f_available').checked) params.set('available',   'true');
+  if (document.getElementById('f_bal_due').checked)  params.set('balance_due',      'true');
+  if (v('f_season'))                                  params.set('season_id',        v('f_season'));
+  if (v('f_status'))                                  params.set('life_cycle_status', v('f_status'));
+  if (document.getElementById('f_available').checked) params.set('available',        'true');
 
   const btn = document.getElementById('findBtn');
   btn.disabled = true;
@@ -121,7 +123,7 @@ async function doSearch() {
 }
 
 function clearSearch() {
-  ['f_client','f_taxid','f_invoice','f_year','f_email','f_date_from','f_date_to','f_cell','f_preparer','f_office','f_season'].forEach(id => {
+  ['f_client','f_taxid','f_invoice','f_year','f_email','f_date_from','f_date_to','f_cell','f_preparer','f_office','f_season','f_status'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('f_bal_due').checked = false;
@@ -129,7 +131,7 @@ function clearSearch() {
   document.getElementById('invoices-found').textContent = '';
   clearSelection();
   document.getElementById('grid-body').innerHTML =
-    '<tr><td colspan="11" class="grid-hint">Use the search above and click Find to load clients</td></tr>';
+    '<tr><td colspan="12" class="grid-hint">Use the search above and click Find to load clients</td></tr>';
   document.getElementById('grid-foot').style.display = 'none';
 }
 
@@ -139,7 +141,7 @@ function renderGrid(rows) {
   document.getElementById('invoices-found').textContent = `Invoices Found = ${rows.length.toLocaleString('en-US')}`;
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="grid-hint">No results found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="grid-hint">No results found</td></tr>';
     document.getElementById('grid-foot').style.display = 'none';
     return;
   }
@@ -170,6 +172,7 @@ function renderGrid(rows) {
       <td>${r.invoice_no ? r.invoice_no + voidBadge + (r.inv_note && r.inv_note.trim() ? ` <span class="note-badge" title="${esc(r.inv_note.trim())}">!</span>` : '') : ''}</td>
       <td>${r.tax_year || ''}</td>
       <td>${esc(r.inv_desc || '')}</td>
+      <td>${esc(r.status_desc || '')}</td>
       <td class="num">${r.invoice_no ? fmt$(r.inv_full_amount)  : ''}</td>
       <td class="num">${r.invoice_no ? fmt$(r.inv_discount)     : ''}</td>
       <td class="num">${r.invoice_no ? fmt$(r.inv_final_amount) : ''}</td>
@@ -349,6 +352,37 @@ async function sendMessage() {
 }
 
 // ── CREATE INVOICE ────────────────────────────────────
+async function loadLifeCycles() {
+  const sel = document.getElementById('inv_status');
+  if (sel.options.length > 1) return; // already loaded
+  const items = await apiFetch('/api/employee/life-cycles');
+  if (!items) return;
+  items.forEach(lc => {
+    const o = document.createElement('option');
+    o.value = lc.life_cycle_status;
+    o.textContent = lc.life_cycle_desc;
+    sel.appendChild(o);
+  });
+}
+
+async function loadClientStatus() {
+  if (!currentSuie) return;
+  const status = await apiFetch(`/api/employee/clients/${currentSuie}/status`);
+  const sel = document.getElementById('inv_status');
+  sel.value = (status && status.life_cycle_status != null) ? status.life_cycle_status : '';
+}
+
+async function saveClientStatus() {
+  if (!currentSuie || !currentInvoiceNo) return;
+  const val = document.getElementById('inv_status').value;
+  if (!val) return;
+  await apiFetch('/api/employee/clients/' + currentSuie + '/status', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ life_cycle_status: parseInt(val), invoice_no: currentInvoiceNo })
+  });
+}
+
 async function openNewInvoiceModal() {
   if (!currentSuie) return;
   currentInvoiceNo = null;
@@ -362,10 +396,14 @@ async function openNewInvoiceModal() {
   document.getElementById('inv_rt_ind').value      = 'No';
   document.getElementById('inv_note').value         = '';
   document.getElementById('inv_void_group').style.display = 'none';
+  document.getElementById('inv_status_group').style.display = '';
+  document.getElementById('inv_status').value = '';
   document.getElementById('paymentsTabBtn').style.display = 'none';
   document.getElementById('inv_office_id').innerHTML = '<option value="">-- Select --</option>';
 
   await loadOffices('inv_office_id');
+  await loadLifeCycles();
+  await loadClientStatus();
   switchInvTab('details');
   openModal('invoiceModal');
 }
@@ -398,6 +436,10 @@ async function openEditInvoiceModal(invoiceNo) {
   document.getElementById('inv_date_display').value = i.inv_date ? fmtDate(i.inv_date) : '';
   document.getElementById('inv_note').value         = i.inv_note        || '';
 
+  document.getElementById('inv_status_group').style.display = '';
+  await loadLifeCycles();
+  await loadClientStatus();
+
   switchInvTab('details');
   openModal('invoiceModal');
 }
@@ -417,6 +459,46 @@ function calcInvFinal() {
 
 async function saveInvoice() {
   clearAlert('invoiceAlert');
+
+  if (!currentInvoiceNo) {
+    const taxYear = document.getElementById('inv_tax_year').value;
+    if (!taxYear) {
+      aceError('You must enter a tax year.');
+      document.getElementById('inv_tax_year').focus();
+      return;
+    }
+    const office = document.getElementById('inv_office_id').value;
+    if (!office) {
+      aceError('You must select an office.');
+      document.getElementById('inv_office_id').focus();
+      return;
+    }
+    const desc = document.getElementById('inv_desc').value.trim();
+    if (!desc) {
+      aceError('Please Enter a Description.');
+      document.getElementById('inv_desc').focus();
+      return;
+    }
+    const formFee = parseFloat(document.getElementById('inv_full_amount').value) || 0;
+    if (formFee <= 0) {
+      aceError('Please enter a form fee.');
+      document.getElementById('inv_full_amount').focus();
+      return;
+    }
+    const invoiceAmt = parseFloat(document.getElementById('inv_final_amount').value) || 0;
+    if (invoiceAmt < 0) {
+      aceError('Invoice amount cannot be less than $0.');
+      document.getElementById('inv_discount').focus();
+      return;
+    }
+    const status = document.getElementById('inv_status').value;
+    if (!status) {
+      aceError('Please select a Status.');
+      document.getElementById('inv_status').focus();
+      return;
+    }
+  }
+
   const body = {
     suie:            currentSuie,
     tax_year:        document.getElementById('inv_tax_year').value    || null,
@@ -441,6 +523,14 @@ async function saveInvoice() {
   });
 
   if (res && res.success) {
+    const statusVal = document.getElementById('inv_status').value;
+    const invoiceNo = currentInvoiceNo || res.invoice_no;
+    if (statusVal && invoiceNo) {
+      const prevNo = currentInvoiceNo;
+      currentInvoiceNo = invoiceNo;
+      await saveClientStatus();
+      currentInvoiceNo = prevNo;
+    }
     closeModal('invoiceModal');
     // Re-run the last search to refresh the grid
     doSearch();
@@ -711,6 +801,14 @@ async function initSearchDropdowns() {
     const sel = document.getElementById('f_season');
     sel.innerHTML = '<option value="">All</option>' +
       seasons.map(s => `<option value="${s.season_id}">${s.season_id}</option>`).join('');
+  }
+
+  // Status (life cycle)
+  const lifeCycles = await apiFetch('/api/employee/life-cycles');
+  if (lifeCycles) {
+    const sel = document.getElementById('f_status');
+    sel.innerHTML = '<option value="">All</option>' +
+      lifeCycles.map(lc => `<option value="${lc.life_cycle_status}">${esc(lc.life_cycle_desc)}</option>`).join('');
   }
 }
 

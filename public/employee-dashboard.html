@@ -71,6 +71,8 @@
       <input type="checkbox" id="f_bal_due" />
       <label style="margin-left:20px">Season:</label>
       <select id="f_season" style="width:100px"><option value="">All</option></select>
+      <label style="margin-left:20px">Status:</label>
+      <select id="f_status" style="width:140px"><option value="">All</option></select>
       <label style="margin-left:20px">Available:</label>
       <input type="checkbox" id="f_available" />
       <span id="invoices-found" style="margin-left:auto"></span>
@@ -104,6 +106,7 @@
             <th>Invoice</th>
             <th>Tax Year</th>
             <th>Invoice Desc</th>
+            <th>Status</th>
             <th class="num">Form Fee</th>
             <th class="num">Discount</th>
             <th class="num">Invoice Amt</th>
@@ -113,11 +116,11 @@
           </tr>
         </thead>
         <tbody id="grid-body">
-          <tr><td colspan="11" class="grid-hint">Use the search above and click Find to load clients</td></tr>
+          <tr><td colspan="12" class="grid-hint">Use the search above and click Find to load clients</td></tr>
         </tbody>
         <tfoot id="grid-foot" style="display:none">
           <tr>
-            <td colspan="5"></td>
+            <td colspan="6"></td>
             <td class="num" id="ft-fee"></td>
             <td class="num" id="ft-disc"></td>
             <td class="num" id="ft-amt"></td>
@@ -221,6 +224,14 @@
           <div class="form-group"><label>Void</label><select id="inv_void_ind"><option value="N">No</option><option value="Y">Yes</option></select></div>
           <div class="form-group"><label>Invoice Date</label><input type="text" id="inv_date_display" readonly style="background:var(--gray-50)" /></div>
         </div>
+        <div class="form-row" id="inv_status_group" style="display:none">
+          <div class="form-group">
+            <label>Status</label>
+            <select id="inv_status" onchange="saveClientStatus()">
+              <option value="">-- Select --</option>
+            </select>
+          </div>
+        </div>
         <div class="form-row one-col">
           <div class="form-group"><label>Note</label><textarea id="inv_note" maxlength="2000" rows="4" style="resize:vertical;white-space:pre-wrap"></textarea></div>
         </div>
@@ -259,6 +270,22 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('paymentModal')">Cancel</button>
       <button class="btn btn-primary" onclick="savePayment()">Record</button>
+    </div>
+  </div>
+</div>
+
+<!-- ACE Error Message -->
+<div class="modal-overlay" id="aceErrorModal">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header">
+      <h2>ACE Error Message</h2>
+      <button class="modal-close" onclick="closeModal('aceErrorModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="aceErrorText" style="font-size:14px;color:#374151"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal('aceErrorModal')">OK</button>
     </div>
   </div>
 </div>
