@@ -899,6 +899,7 @@ async function initSearchDropdowns() {
   if (preparers) {
     const sel = document.getElementById('f_preparer');
     sel.innerHTML = '<option value="">All</option>' +
+      '<option value="unassigned">Un-Assigned</option>' +
       preparers.map(p => `<option value="${p.emp_id}">${esc(p.name)}</option>`).join('');
   }
 

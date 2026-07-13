@@ -46,7 +46,15 @@ router.get('/search', async (req, res) => {
     const pool    = await getPool();
     const request = pool.request().input('emp_id', sql.NVarChar(50), req.user.emp_id);
 
-    let where = `pe.assigned_prep = @emp_id`;
+    let where;
+    if (preparer === 'unassigned') {
+      where = `pe.assigned_prep IS NULL`;
+    } else if (preparer) {
+      request.input('preparer', sql.NVarChar(50), preparer);
+      where = `pe.assigned_prep = @preparer`;
+    } else {
+      where = `pe.assigned_prep = @emp_id`;
+    }
 
     if (client) {
       request.input('client', sql.NVarChar(200), `%${client}%`);
@@ -79,10 +87,6 @@ router.get('/search', async (req, res) => {
     if (cell) {
       request.input('cell', sql.NVarChar(50), `%${cell}%`);
       where += ` AND (pe.cell LIKE @cell OR p.cell LIKE @cell)`;
-    }
-    if (preparer) {
-      request.input('preparer', sql.NVarChar(50), preparer);
-      where += ` AND pe.assigned_prep = @preparer`;
     }
     if (office_id) {
       request.input('office_id', sql.NVarChar(50), office_id);
