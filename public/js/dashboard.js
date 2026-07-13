@@ -78,6 +78,87 @@ function runCallList(period) {
   alert(`Call list: ${period} — coming soon`);
 }
 
+let noEntityReportRows = [];
+let noEntityReportSort = { field: null, dir: 1 };
+
+async function runNoEntityReport() {
+  document.querySelector('.hdr-menu').classList.remove('open');
+  const tbody = document.getElementById('no-entity-report-body');
+  tbody.innerHTML = '<tr><td colspan="5" class="grid-hint">Loading…</td></tr>';
+  openModal('noEntityReportModal');
+
+  noEntityReportSort = { field: null, dir: 1 };
+  updateNoEntitySortArrows();
+
+  const rows = await apiFetch(`${ACE.config.apiBase}/reports/no-entity-clients`);
+  if (!rows) return;
+
+  noEntityReportRows = rows;
+  renderNoEntityReport();
+}
+
+function renderNoEntityReport() {
+  const tbody = document.getElementById('no-entity-report-body');
+  if (!noEntityReportRows.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="grid-hint">No clients found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = noEntityReportRows.map(r => `
+    <tr>
+      <td>${r.first_name || ''}</td>
+      <td>${r.last_name || ''}</td>
+      <td>${r.cell || ''}</td>
+      <td>${r.email || ''}</td>
+      <td>${fmtDate(r.created_date)}</td>
+    </tr>
+  `).join('');
+}
+
+function sortNoEntityReport(field) {
+  if (noEntityReportSort.field === field) {
+    noEntityReportSort.dir *= -1;
+  } else {
+    noEntityReportSort = { field, dir: 1 };
+  }
+
+  const { dir } = noEntityReportSort;
+  noEntityReportRows.sort((a, b) => {
+    let av = a[field], bv = b[field];
+    if (field === 'created_date') {
+      av = new Date(av).getTime();
+      bv = new Date(bv).getTime();
+    } else {
+      av = (av || '').toString().toLowerCase();
+      bv = (bv || '').toString().toLowerCase();
+    }
+    if (av < bv) return -1 * dir;
+    if (av > bv) return 1 * dir;
+    return 0;
+  });
+
+  updateNoEntitySortArrows();
+  renderNoEntityReport();
+}
+
+function updateNoEntitySortArrows() {
+  document.querySelectorAll('#no-entity-report-grid th.sortable').forEach(th => {
+    th.querySelector('.sort-arrow')?.remove();
+    if (th.dataset.field === noEntityReportSort.field) {
+      const arrow = document.createElement('span');
+      arrow.className = 'sort-arrow';
+      arrow.textContent = noEntityReportSort.dir === 1 ? '▲' : '▼';
+      th.appendChild(arrow);
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('#no-entity-report-grid th.sortable').forEach(th => {
+    th.addEventListener('click', () => sortNoEntityReport(th.dataset.field));
+  });
+});
+
 function logout() {
   localStorage.removeItem('emp_token');
   localStorage.removeItem('emp_name');

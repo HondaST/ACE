@@ -900,4 +900,25 @@ router.put('/profile/password', async (req, res) => {
   }
 });
 
+// ── Reports ────────────────────────────────────────────────────
+
+// People who registered but never created a tax entity
+router.get('/reports/no-entity-clients', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT first_name, last_name, cell, email, created_date
+      FROM people
+      WHERE sui NOT IN (
+        SELECT sui
+        FROM people_entity
+      )
+      ORDER BY created_date, last_name, first_name
+    `);
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

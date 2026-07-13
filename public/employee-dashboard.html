@@ -23,6 +23,7 @@
           <a href="#" onclick="runCallList('older');return false;">Older Clients</a>
         </div>
       </div>
+      <a href="#" onclick="runNoEntityReport();return false;">No Tax Entity Clients</a>
     </div>
   </div>
   <div class="spacer"></div>
@@ -334,6 +335,35 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('profileModal')">Close</button>
       <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- No Tax Entity Clients report -->
+<div class="modal-overlay" id="noEntityReportModal">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header">
+      <h2>No Tax Entity Clients</h2>
+      <button class="modal-close" onclick="closeModal('noEntityReportModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <table class="grid-table" id="no-entity-report-grid">
+        <thead>
+          <tr>
+            <th class="sortable" data-field="first_name">First Name</th>
+            <th class="sortable" data-field="last_name">Last Name</th>
+            <th class="sortable" data-field="cell">Cell</th>
+            <th class="sortable" data-field="email">Email</th>
+            <th class="sortable" data-field="created_date">Created Date</th>
+          </tr>
+        </thead>
+        <tbody id="no-entity-report-body">
+          <tr><td colspan="5" class="grid-hint">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('noEntityReportModal')">Close</button>
     </div>
   </div>
 </div>
