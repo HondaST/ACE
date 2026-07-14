@@ -892,11 +892,71 @@ async function loadPaymentTypeOptions(selectId) {
   });
 })();
 
+// ── RIGHT-CLICK CONTEXT MENU (Prep column — reassign preparer) ──
+(function() {
+  const menu = document.getElementById('ctx-menu-prep');
+
+  document.getElementById('grid-body').addEventListener('contextmenu', e => {
+    const td = e.target.closest('td');
+    if (!td) return;
+    const tr = td.closest('tr');
+    if (!tr) return;
+
+    // Prep is the last cell
+    const cells = tr.querySelectorAll('td');
+    if (td !== cells[cells.length - 1]) return;
+
+    const suie = tr.dataset.suie;
+    if (!suie) return;
+
+    e.preventDefault();
+
+    const preparers = ACE.cache.preparers || [];
+    const itemStyle = 'padding:8px 16px;cursor:pointer;font-size:13px;color:var(--gray-900);';
+    menu.innerHTML =
+      `<div class="ctx-prep-item" data-emp-id="" style="${itemStyle}"
+            onmouseenter="this.style.background='var(--gray-100)'" onmouseleave="this.style.background=''">
+         Un-Assign
+       </div>` +
+      preparers.map(p => `
+        <div class="ctx-prep-item" data-emp-id="${esc(p.emp_id)}" style="${itemStyle}"
+             onmouseenter="this.style.background='var(--gray-100)'" onmouseleave="this.style.background=''">
+          ${esc(p.name)}
+        </div>`).join('');
+
+    menu.style.display = 'block';
+    menu.style.left = e.clientX + 'px';
+    menu.style.top  = e.clientY + 'px';
+
+    menu.querySelectorAll('.ctx-prep-item').forEach(item => {
+      item.onclick = async () => {
+        menu.style.display = 'none';
+        const empId = item.dataset.empId || null;
+        const res = await apiFetch(`/api/employee/clients/${encodeURIComponent(suie)}/preparer`, {
+          method:  'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ assigned_prep: empId })
+        });
+        if (res && res.success) doSearch();
+      };
+    });
+  });
+
+  // Dismiss on any click elsewhere
+  document.addEventListener('click', () => { menu.style.display = 'none'; });
+  document.addEventListener('contextmenu', e => {
+    if (!e.target.closest('#ctx-menu-prep') && !e.target.closest('#grid-body')) {
+      menu.style.display = 'none';
+    }
+  });
+})();
+
 // ── INIT: populate search dropdowns on load ────────────
 async function initSearchDropdowns() {
   // Preparers
   const preparers = await apiFetch('/api/employee/preparers');
   if (preparers) {
+    ACE.cache.preparers = preparers;
     const sel = document.getElementById('f_preparer');
     sel.innerHTML = '<option value="">All</option>' +
       '<option value="unassigned">Un-Assigned</option>' +

@@ -404,6 +404,10 @@ html, body {
 .grid-table th.sortable .sort-arrow { margin-left: 4px; }
 
 .grid-table tbody tr:hover { background: var(--gray-50); cursor: pointer; }
+
+/* Right-clickable columns (Tax Number, Prep) show a magnifier cursor */
+#invoice-grid tbody td:nth-child(2):hover,
+#invoice-grid tbody td:last-child:hover { cursor: zoom-in; }
 .grid-table tbody tr.selected { background: var(--sel-bg); outline: 1px solid var(--sel-border); }
 
 .grid-table tfoot td {

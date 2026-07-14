@@ -186,6 +186,34 @@ router.get('/preparers', async (req, res) => {
   }
 });
 
+// Reassign (or unassign) the preparer for an entity
+router.put('/clients/:suie/preparer', async (req, res) => {
+  try {
+    const { assigned_prep } = req.body;
+    const pool = await getPool();
+
+    if (assigned_prep) {
+      const empCheck = await pool.request()
+        .input('emp_id', sql.NVarChar(50), String(assigned_prep))
+        .query(`SELECT 1 FROM employee WHERE emp_id = @emp_id`);
+      if (!empCheck.recordset.length) return res.status(400).json({ error: 'Preparer not found' });
+    }
+
+    const result = await pool.request()
+      .input('suie',         sql.NVarChar(50), req.params.suie)
+      .input('assigned_prep', sql.NVarChar(50), assigned_prep ? String(assigned_prep) : null)
+      .query(`
+        UPDATE people_entity
+        SET    assigned_prep = @assigned_prep
+        WHERE  suie = @suie
+      `);
+    if (!result.rowsAffected[0]) return res.status(404).json({ error: 'Client not found' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Clients (entities assigned to this employee) ──────────────
 
 // All entities assigned to this employee
