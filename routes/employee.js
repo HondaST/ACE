@@ -953,4 +953,123 @@ router.get('/reports/no-entity-clients', async (req, res) => {
   }
 });
 
+// Clients whose most recent invoice fell last calendar year and who have no invoice yet this year
+router.get('/reports/call-list/last-year', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      DECLARE @lastYearStart DATE = DATEFROMPARTS(YEAR(GETDATE()) - 1, 1, 1);
+      DECLARE @lastYearEnd   DATE = DATEFROMPARTS(YEAR(GETDATE()) - 1, 12, 31);
+      DECLARE @thisYearStart DATE = DATEFROMPARTS(YEAR(GETDATE()), 1, 1);
+
+      SELECT
+        Client = CASE WHEN entityname IS NULL THEN pe.last_name + ', ' + pe.first_name ELSE entityname END,
+        Tax_id = CASE WHEN taxidnumber IS NULL THEN '' ELSE RIGHT(taxidnumber, 4) END,
+        Phone = CASE WHEN pe.cell IS NULL THEN p.cell ELSE pe.cell END,
+        eMail = CASE WHEN pe.email IS NULL THEN p.email ELSE pe.email END,
+        Invoice = invoice_no,
+        Invoice_date = CAST(inv_date AS DATE),
+        Fee = inv_final_amount,
+        Prep = e.last_name + ',' + e.first_name,
+        Owner = p.last_name + ', ' + p.first_name
+      FROM invoice i
+      JOIN people_entity pe ON i.suie = pe.suie
+      JOIN people p ON p.sui = pe.sui
+      JOIN employee e ON e.emp_id = pe.assigned_prep
+      WHERE inv_date BETWEEN @lastYearStart AND @lastYearEnd
+        AND i.suie NOT IN (
+          SELECT suie
+          FROM invoice
+          WHERE inv_date >= @thisYearStart
+        )
+        AND inv_date = (
+          SELECT MAX(inv_date)
+          FROM invoice
+          WHERE invoice.suie = i.suie
+        )
+      ORDER BY inv_date, Client
+    `);
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Clients whose most recent invoice fell two calendar years ago and who have no invoice yet this year
+router.get('/reports/call-list/two-years-ago', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      DECLARE @twoYearsAgoStart DATE = DATEFROMPARTS(YEAR(GETDATE()) - 2, 1, 1);
+      DECLARE @twoYearsAgoEnd   DATE = DATEFROMPARTS(YEAR(GETDATE()) - 2, 12, 31);
+      DECLARE @thisYearStart   DATE = DATEFROMPARTS(YEAR(GETDATE()), 1, 1);
+
+      SELECT
+        Client = CASE WHEN entityname IS NULL THEN pe.last_name + ', ' + pe.first_name ELSE entityname END,
+        Tax_id = CASE WHEN taxidnumber IS NULL THEN '' ELSE RIGHT(taxidnumber, 4) END,
+        Phone = CASE WHEN pe.cell IS NULL THEN p.cell ELSE pe.cell END,
+        eMail = CASE WHEN pe.email IS NULL THEN p.email ELSE pe.email END,
+        Invoice = invoice_no,
+        Invoice_date = CAST(inv_date AS DATE),
+        Fee = inv_final_amount,
+        Prep = e.last_name + ',' + e.first_name,
+        Owner = p.last_name + ', ' + p.first_name
+      FROM invoice i
+      JOIN people_entity pe ON i.suie = pe.suie
+      JOIN people p ON p.sui = pe.sui
+      JOIN employee e ON e.emp_id = pe.assigned_prep
+      WHERE inv_date BETWEEN @twoYearsAgoStart AND @twoYearsAgoEnd
+        AND i.suie NOT IN (
+          SELECT suie
+          FROM invoice
+          WHERE inv_date >= @thisYearStart
+        )
+        AND inv_date = (
+          SELECT MAX(inv_date)
+          FROM invoice
+          WHERE invoice.suie = i.suie
+        )
+      ORDER BY inv_date, Client
+    `);
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Clients whose most recent invoice is 3+ years old
+router.get('/reports/call-list/older', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      DECLARE @cutoff DATE = DATEFROMPARTS(YEAR(GETDATE()) - 2, 1, 1);
+
+      SELECT
+        Client = CASE WHEN entityname IS NULL THEN pe.last_name + ', ' + pe.first_name ELSE entityname END,
+        Tax_id = CASE WHEN taxidnumber IS NULL THEN '' ELSE RIGHT(taxidnumber, 4) END,
+        Phone = CASE WHEN pe.cell IS NULL THEN p.cell ELSE pe.cell END,
+        eMail = CASE WHEN pe.email IS NULL THEN p.email ELSE pe.email END,
+        Invoice = invoice_no,
+        Invoice_date = CAST(inv_date AS DATE),
+        Fee = inv_final_amount,
+        Prep = e.last_name + ',' + e.first_name,
+        Owner = p.last_name + ', ' + p.first_name
+      FROM invoice i
+      JOIN people_entity pe ON i.suie = pe.suie
+      JOIN people p ON p.sui = pe.sui
+      JOIN employee e ON e.emp_id = pe.assigned_prep
+      WHERE inv_date < @cutoff
+        AND inv_date = (
+          SELECT MAX(inv_date)
+          FROM invoice
+          WHERE invoice.suie = i.suie
+        )
+      ORDER BY inv_date, Client
+    `);
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

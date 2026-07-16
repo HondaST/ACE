@@ -368,6 +368,105 @@
   </div>
 </div>
 
+<!-- Available Call Lists — Last Year report -->
+<div class="modal-overlay" id="callListLastYearModal">
+  <div class="modal" style="max-width:900px">
+    <div class="modal-header">
+      <h2>Available Call List — Last Year</h2>
+      <button class="modal-close" onclick="closeModal('callListLastYearModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <table class="grid-table" id="call-list-last-year-grid">
+        <thead>
+          <tr>
+            <th class="sortable" data-field="Client">Client</th>
+            <th class="sortable" data-field="Tax_id">Tax ID</th>
+            <th class="sortable" data-field="Phone">Phone</th>
+            <th class="sortable" data-field="eMail">Email</th>
+            <th class="sortable" data-field="Invoice">Invoice</th>
+            <th class="sortable" data-field="Invoice_date">Invoice Date</th>
+            <th class="sortable" data-field="Fee">Fee</th>
+            <th class="sortable" data-field="Prep">Prep</th>
+            <th class="sortable" data-field="Owner">Owner</th>
+          </tr>
+        </thead>
+        <tbody id="call-list-last-year-body">
+          <tr><td colspan="9" class="grid-hint">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('callListLastYearModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Available Call Lists — Two Years Ago report -->
+<div class="modal-overlay" id="callListTwoYearsAgoModal">
+  <div class="modal" style="max-width:900px">
+    <div class="modal-header">
+      <h2>Available Call List — Two Years Ago</h2>
+      <button class="modal-close" onclick="closeModal('callListTwoYearsAgoModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <table class="grid-table" id="call-list-two-years-ago-grid">
+        <thead>
+          <tr>
+            <th class="sortable" data-field="Client">Client</th>
+            <th class="sortable" data-field="Tax_id">Tax ID</th>
+            <th class="sortable" data-field="Phone">Phone</th>
+            <th class="sortable" data-field="eMail">Email</th>
+            <th class="sortable" data-field="Invoice">Invoice</th>
+            <th class="sortable" data-field="Invoice_date">Invoice Date</th>
+            <th class="sortable" data-field="Fee">Fee</th>
+            <th class="sortable" data-field="Prep">Prep</th>
+            <th class="sortable" data-field="Owner">Owner</th>
+          </tr>
+        </thead>
+        <tbody id="call-list-two-years-ago-body">
+          <tr><td colspan="9" class="grid-hint">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('callListTwoYearsAgoModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Available Call Lists — Older Clients report -->
+<div class="modal-overlay" id="callListOlderModal">
+  <div class="modal" style="max-width:900px">
+    <div class="modal-header">
+      <h2>Available Call List — Older Clients</h2>
+      <button class="modal-close" onclick="closeModal('callListOlderModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <table class="grid-table" id="call-list-older-grid">
+        <thead>
+          <tr>
+            <th class="sortable" data-field="Client">Client</th>
+            <th class="sortable" data-field="Tax_id">Tax ID</th>
+            <th class="sortable" data-field="Phone">Phone</th>
+            <th class="sortable" data-field="eMail">Email</th>
+            <th class="sortable" data-field="Invoice">Invoice</th>
+            <th class="sortable" data-field="Invoice_date">Invoice Date</th>
+            <th class="sortable" data-field="Fee">Fee</th>
+            <th class="sortable" data-field="Prep">Prep</th>
+            <th class="sortable" data-field="Owner">Owner</th>
+          </tr>
+        </thead>
+        <tbody id="call-list-older-body">
+          <tr><td colspan="9" class="grid-hint">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('callListOlderModal')">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Right-click context menu -->
 <div id="ctx-menu" style="display:none;position:fixed;z-index:9999;background:#fff;border:1px solid var(--gray-300);border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:200px;padding:4px 0;">
   <div id="ctx-search-taxid" style="padding:8px 16px;cursor:pointer;font-size:13px;color:var(--gray-900);"

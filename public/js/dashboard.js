@@ -74,9 +74,271 @@ async function apiFetch(url, opts = {}) {
 // ── SECTION: REPORTS ──────────────────────────────────
 function runCallList(period) {
   document.querySelector('.hdr-menu').classList.remove('open');
-  // TODO: implement call list report for period: last_year | two_years_ago | older
-  alert(`Call list: ${period} — coming soon`);
+  if (period === 'last_year') return runCallListLastYear();
+  if (period === 'two_years_ago') return runCallListTwoYearsAgo();
+  if (period === 'older') return runCallListOlder();
 }
+
+let callListLastYearRows = [];
+let callListLastYearSort = { field: null, dir: 1 };
+
+async function runCallListLastYear() {
+  const tbody = document.getElementById('call-list-last-year-body');
+  tbody.innerHTML = '<tr><td colspan="9" class="grid-hint">Loading…</td></tr>';
+  openModal('callListLastYearModal');
+
+  callListLastYearSort = { field: null, dir: 1 };
+  updateCallListLastYearSortArrows();
+
+  const rows = await apiFetch(`${ACE.config.apiBase}/reports/call-list/last-year`);
+  if (!rows) return;
+
+  callListLastYearRows = rows;
+  renderCallListLastYear();
+}
+
+function renderCallListLastYear() {
+  const tbody = document.getElementById('call-list-last-year-body');
+  if (!callListLastYearRows.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="grid-hint">No clients found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = callListLastYearRows.map(r => `
+    <tr>
+      <td>${esc(r.Client || '')}</td>
+      <td>${esc(r.Tax_id || '')}</td>
+      <td>${esc(r.Phone || '')}</td>
+      <td>${esc(r.eMail || '')}</td>
+      <td>${r.Invoice || ''}</td>
+      <td>${fmtDate(r.Invoice_date)}</td>
+      <td>${fmt$(r.Fee)}</td>
+      <td>${esc(r.Prep || '')}</td>
+      <td>${esc(r.Owner || '')}</td>
+    </tr>
+  `).join('');
+}
+
+function sortCallListLastYear(field) {
+  if (callListLastYearSort.field === field) {
+    callListLastYearSort.dir *= -1;
+  } else {
+    callListLastYearSort = { field, dir: 1 };
+  }
+
+  const { dir } = callListLastYearSort;
+  callListLastYearRows.sort((a, b) => {
+    let av = a[field], bv = b[field];
+    if (field === 'Invoice_date') {
+      av = new Date(av).getTime();
+      bv = new Date(bv).getTime();
+    } else if (field === 'Fee' || field === 'Invoice') {
+      av = Number(av) || 0;
+      bv = Number(bv) || 0;
+    } else {
+      av = (av || '').toString().toLowerCase();
+      bv = (bv || '').toString().toLowerCase();
+    }
+    if (av < bv) return -1 * dir;
+    if (av > bv) return 1 * dir;
+    return 0;
+  });
+
+  updateCallListLastYearSortArrows();
+  renderCallListLastYear();
+}
+
+function updateCallListLastYearSortArrows() {
+  document.querySelectorAll('#call-list-last-year-grid th.sortable').forEach(th => {
+    th.querySelector('.sort-arrow')?.remove();
+    if (th.dataset.field === callListLastYearSort.field) {
+      const arrow = document.createElement('span');
+      arrow.className = 'sort-arrow';
+      arrow.textContent = callListLastYearSort.dir === 1 ? '▲' : '▼';
+      th.appendChild(arrow);
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('#call-list-last-year-grid th.sortable').forEach(th => {
+    th.addEventListener('click', () => sortCallListLastYear(th.dataset.field));
+  });
+});
+
+let callListTwoYearsAgoRows = [];
+let callListTwoYearsAgoSort = { field: null, dir: 1 };
+
+async function runCallListTwoYearsAgo() {
+  const tbody = document.getElementById('call-list-two-years-ago-body');
+  tbody.innerHTML = '<tr><td colspan="9" class="grid-hint">Loading…</td></tr>';
+  openModal('callListTwoYearsAgoModal');
+
+  callListTwoYearsAgoSort = { field: null, dir: 1 };
+  updateCallListTwoYearsAgoSortArrows();
+
+  const rows = await apiFetch(`${ACE.config.apiBase}/reports/call-list/two-years-ago`);
+  if (!rows) return;
+
+  callListTwoYearsAgoRows = rows;
+  renderCallListTwoYearsAgo();
+}
+
+function renderCallListTwoYearsAgo() {
+  const tbody = document.getElementById('call-list-two-years-ago-body');
+  if (!callListTwoYearsAgoRows.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="grid-hint">No clients found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = callListTwoYearsAgoRows.map(r => `
+    <tr>
+      <td>${esc(r.Client || '')}</td>
+      <td>${esc(r.Tax_id || '')}</td>
+      <td>${esc(r.Phone || '')}</td>
+      <td>${esc(r.eMail || '')}</td>
+      <td>${r.Invoice || ''}</td>
+      <td>${fmtDate(r.Invoice_date)}</td>
+      <td>${fmt$(r.Fee)}</td>
+      <td>${esc(r.Prep || '')}</td>
+      <td>${esc(r.Owner || '')}</td>
+    </tr>
+  `).join('');
+}
+
+function sortCallListTwoYearsAgo(field) {
+  if (callListTwoYearsAgoSort.field === field) {
+    callListTwoYearsAgoSort.dir *= -1;
+  } else {
+    callListTwoYearsAgoSort = { field, dir: 1 };
+  }
+
+  const { dir } = callListTwoYearsAgoSort;
+  callListTwoYearsAgoRows.sort((a, b) => {
+    let av = a[field], bv = b[field];
+    if (field === 'Invoice_date') {
+      av = new Date(av).getTime();
+      bv = new Date(bv).getTime();
+    } else if (field === 'Fee' || field === 'Invoice') {
+      av = Number(av) || 0;
+      bv = Number(bv) || 0;
+    } else {
+      av = (av || '').toString().toLowerCase();
+      bv = (bv || '').toString().toLowerCase();
+    }
+    if (av < bv) return -1 * dir;
+    if (av > bv) return 1 * dir;
+    return 0;
+  });
+
+  updateCallListTwoYearsAgoSortArrows();
+  renderCallListTwoYearsAgo();
+}
+
+function updateCallListTwoYearsAgoSortArrows() {
+  document.querySelectorAll('#call-list-two-years-ago-grid th.sortable').forEach(th => {
+    th.querySelector('.sort-arrow')?.remove();
+    if (th.dataset.field === callListTwoYearsAgoSort.field) {
+      const arrow = document.createElement('span');
+      arrow.className = 'sort-arrow';
+      arrow.textContent = callListTwoYearsAgoSort.dir === 1 ? '▲' : '▼';
+      th.appendChild(arrow);
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('#call-list-two-years-ago-grid th.sortable').forEach(th => {
+    th.addEventListener('click', () => sortCallListTwoYearsAgo(th.dataset.field));
+  });
+});
+
+let callListOlderRows = [];
+let callListOlderSort = { field: null, dir: 1 };
+
+async function runCallListOlder() {
+  const tbody = document.getElementById('call-list-older-body');
+  tbody.innerHTML = '<tr><td colspan="9" class="grid-hint">Loading…</td></tr>';
+  openModal('callListOlderModal');
+
+  callListOlderSort = { field: null, dir: 1 };
+  updateCallListOlderSortArrows();
+
+  const rows = await apiFetch(`${ACE.config.apiBase}/reports/call-list/older`);
+  if (!rows) return;
+
+  callListOlderRows = rows;
+  renderCallListOlder();
+}
+
+function renderCallListOlder() {
+  const tbody = document.getElementById('call-list-older-body');
+  if (!callListOlderRows.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="grid-hint">No clients found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = callListOlderRows.map(r => `
+    <tr>
+      <td>${esc(r.Client || '')}</td>
+      <td>${esc(r.Tax_id || '')}</td>
+      <td>${esc(r.Phone || '')}</td>
+      <td>${esc(r.eMail || '')}</td>
+      <td>${r.Invoice || ''}</td>
+      <td>${fmtDate(r.Invoice_date)}</td>
+      <td>${fmt$(r.Fee)}</td>
+      <td>${esc(r.Prep || '')}</td>
+      <td>${esc(r.Owner || '')}</td>
+    </tr>
+  `).join('');
+}
+
+function sortCallListOlder(field) {
+  if (callListOlderSort.field === field) {
+    callListOlderSort.dir *= -1;
+  } else {
+    callListOlderSort = { field, dir: 1 };
+  }
+
+  const { dir } = callListOlderSort;
+  callListOlderRows.sort((a, b) => {
+    let av = a[field], bv = b[field];
+    if (field === 'Invoice_date') {
+      av = new Date(av).getTime();
+      bv = new Date(bv).getTime();
+    } else if (field === 'Fee' || field === 'Invoice') {
+      av = Number(av) || 0;
+      bv = Number(bv) || 0;
+    } else {
+      av = (av || '').toString().toLowerCase();
+      bv = (bv || '').toString().toLowerCase();
+    }
+    if (av < bv) return -1 * dir;
+    if (av > bv) return 1 * dir;
+    return 0;
+  });
+
+  updateCallListOlderSortArrows();
+  renderCallListOlder();
+}
+
+function updateCallListOlderSortArrows() {
+  document.querySelectorAll('#call-list-older-grid th.sortable').forEach(th => {
+    th.querySelector('.sort-arrow')?.remove();
+    if (th.dataset.field === callListOlderSort.field) {
+      const arrow = document.createElement('span');
+      arrow.className = 'sort-arrow';
+      arrow.textContent = callListOlderSort.dir === 1 ? '▲' : '▼';
+      th.appendChild(arrow);
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('#call-list-older-grid th.sortable').forEach(th => {
+    th.addEventListener('click', () => sortCallListOlder(th.dataset.field));
+  });
+});
 
 let noEntityReportRows = [];
 let noEntityReportSort = { field: null, dir: 1 };
