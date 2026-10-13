@@ -682,9 +682,27 @@ async function loadFiles() {
       <td>${esc(f.file_type_desc || f.file_type_id || '')}</td>
       <td>${fmtDate(f.created_dt)}</td>
       <td>${fmtSize(f.file_size)}</td>
-      <td><a href="/api/employee/files/${f.file_info_id}/open" target="_blank" class="link-btn">Open</a></td>
+      <td><a href="#" onclick="openFile(${f.file_info_id}); return false;" class="link-btn">Open</a></td>
     </tr>
   `).join('');
+}
+
+// Plain links can't send the Bearer token, so fetch the file and open it as a blob URL
+async function openFile(fileInfoId) {
+  const win = window.open('', '_blank');   // open synchronously to avoid the popup blocker
+  const res = await fetch(`/api/employee/files/${fileInfoId}/open`, {
+    headers: { 'Authorization': `Bearer ${empToken}` }
+  });
+  if (res.status === 401) { if (win) win.close(); logout(); return; }
+  if (!res.ok) {
+    if (win) win.close();
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    alert(err.error || 'Could not open file');
+    return;
+  }
+  const url = URL.createObjectURL(await res.blob());
+  if (win) win.location.href = url; else window.open(url, '_blank');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 // ── SECTION 6–8: MESSAGES ─────────────────────────────
