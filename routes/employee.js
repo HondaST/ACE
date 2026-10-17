@@ -82,7 +82,7 @@ router.get('/search', async (req, res) => {
     }
     if (date_to) {
       request.input('date_to', sql.Date, date_to);
-      where += ` AND i.inv_date <= @date_to`;
+      where += ` AND cast(i.inv_date as date) <= @date_to`;
     }
     if (cell) {
       request.input('cell', sql.NVarChar(50), `%${cell}%`);
