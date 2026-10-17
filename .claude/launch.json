@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "employee-portal",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+      "runtimeArgs": ["server.js"],
+      "port": 3001,
+      "cwd": "."
+    },
+    {
+      "name": "client-portal",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+      "runtimeArgs": ["start-client-portal.js"],
+      "port": 3000,
+      "cwd": "."
+    }
+  ]
+}
