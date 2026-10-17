@@ -976,7 +976,7 @@ router.get('/reports/call-list/last-year', async (req, res) => {
       JOIN people_entity pe ON i.suie = pe.suie
       JOIN people p ON p.sui = pe.sui
       JOIN employee e ON e.emp_id = pe.assigned_prep
-      WHERE inv_date BETWEEN @lastYearStart AND @lastYearEnd
+      WHERE cast(inv_date as date) BETWEEN @lastYearStart AND @lastYearEnd
         AND i.suie NOT IN (
           SELECT suie
           FROM invoice
