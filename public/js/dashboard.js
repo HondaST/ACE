@@ -458,9 +458,59 @@ function showAlert(id, msg, type='error') {
 }
 function clearAlert(id) { const el = document.getElementById(id); if (el) el.innerHTML = ''; }
 
+// Set while a corner drag finishes so the release doesn't count as a click-outside close
+let modalJustResized = false;
+
 document.querySelectorAll('.modal-overlay').forEach(o =>
-  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); })
+  o.addEventListener('click', e => { if (e.target === o && !modalJustResized) o.classList.remove('open'); })
 );
+
+// Corner-drag resizing for .modal.resizable. The first drag pins the modal
+// at its current spot (position: fixed) so the opposite corner stays still.
+const MODAL_MIN_W = 320, MODAL_MIN_H = 200;
+
+function startModalResize(e, modal, dir) {
+  e.preventDefault();
+  e.stopPropagation();
+  const r = modal.getBoundingClientRect();
+  modal.classList.add('resized');
+  Object.assign(modal.style, {
+    left: r.left + 'px', top: r.top + 'px',
+    width: r.width + 'px', height: r.height + 'px', maxWidth: 'none'
+  });
+  const startX = e.clientX, startY = e.clientY;
+  const handle = e.currentTarget;
+  handle.setPointerCapture(e.pointerId);
+
+  const move = ev => {
+    const dx = ev.clientX - startX, dy = ev.clientY - startY;
+    let left = r.left, top = r.top, width = r.width, height = r.height;
+    if (dir.includes('e')) width  = Math.min(Math.max(MODAL_MIN_W, r.width + dx),  window.innerWidth - r.left);
+    if (dir.includes('s')) height = Math.min(Math.max(MODAL_MIN_H, r.height + dy), window.innerHeight - r.top);
+    if (dir.includes('w')) { width  = Math.min(Math.max(MODAL_MIN_W, r.width - dx),  r.right);  left = r.right - width; }
+    if (dir.includes('n')) { height = Math.min(Math.max(MODAL_MIN_H, r.height - dy), r.bottom); top  = r.bottom - height; }
+    Object.assign(modal.style, { left: left + 'px', top: top + 'px', width: width + 'px', height: height + 'px' });
+  };
+  const up = () => {
+    handle.removeEventListener('pointermove', move);
+    handle.removeEventListener('pointerup', up);
+    handle.removeEventListener('pointercancel', up);
+    modalJustResized = true;
+    setTimeout(() => { modalJustResized = false; }, 0);
+  };
+  handle.addEventListener('pointermove', move);
+  handle.addEventListener('pointerup', up);
+  handle.addEventListener('pointercancel', up);
+}
+
+document.querySelectorAll('.modal.resizable').forEach(modal => {
+  ['nw', 'ne', 'sw', 'se'].forEach(dir => {
+    const h = document.createElement('div');
+    h.className = `resize-handle ${dir}`;
+    h.addEventListener('pointerdown', e => startModalResize(e, modal, dir));
+    modal.appendChild(h);
+  });
+});
 
 // ── SECTION 1: SEARCH ─────────────────────────────────
 document.addEventListener('keydown', e => {

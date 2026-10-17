@@ -469,6 +469,17 @@ html, body {
 .modal-body { padding: 16px 20px; }
 .modal-footer { padding: 12px 20px; border-top: 1px solid var(--gray-200); display: flex; gap: 8px; justify-content: flex-end; }
 
+/* Resizable modals — drag any corner; body scrolls, header/footer stay put */
+.modal.resizable { position: relative; display: flex; flex-direction: column; overflow: hidden; }
+.modal.resizable .modal-body { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.modal.resizable.resized { position: fixed; max-width: none; max-height: none; }
+.resize-handle { position: absolute; width: 14px; height: 14px; z-index: 2; touch-action: none; }
+.resize-handle.nw { top: 0;    left: 0;  cursor: nwse-resize; }
+.resize-handle.ne { top: 0;    right: 0; cursor: nesw-resize; }
+.resize-handle.sw { bottom: 0; left: 0;  cursor: nesw-resize; }
+.resize-handle.se { bottom: 0; right: 0; cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 0 55%, var(--gray-500) 55% 62%, transparent 62% 75%, var(--gray-500) 75% 82%, transparent 82%); }
+
 /* Form elements inside modals */
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 .form-row.one-col { grid-template-columns: 1fr; }
